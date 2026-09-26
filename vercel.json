@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/monitor/:match*",
+      "destination": "https://your-domain.example/_vercel/:match*"
+    }
+  ]
+}
