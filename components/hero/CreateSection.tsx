@@ -56,7 +56,7 @@ export default function CreateSection() {
                 <UnderlineToBackground
                   label="NFTs"
                   targetTextColor="#ffffff"
-                  className="text-[#22ff88] cursor-pointer inline-block pr-4"
+                  className="text-[#0089EE] cursor-pointer inline-block pr-4"
                   underlineHeightRatio={0}
                   underlinePaddingRatio={0}
                   transition={{ type: 'spring', damping: 20, stiffness: 200 }}

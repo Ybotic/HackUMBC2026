@@ -45,7 +45,7 @@ export default function TrailSection() {
                     'CLASH!',
                     'WIN!',
                   ]}
-                  mainClassName="text-white px-8 sm:px-12 md:px-16 bg-[#1e7a44] overflow-hidden py-4 sm:py-6 md:py-8 justify-center rounded-[48px] sm:rounded-[56px] uppercase tracking-tight"
+                  mainClassName="text-white px-8 sm:px-12 md:px-16 bg-[#FC2078] overflow-hidden py-4 sm:py-6 md:py-8 justify-center rounded-[48px] sm:rounded-[56px] uppercase tracking-tight"
                   staggerFrom="last"
                   initial={{ y: '100%' }}
                   animate={{ y: 0 }}
@@ -56,7 +56,7 @@ export default function TrailSection() {
                   rotationInterval={2500}
                 />
               }
-              mediaUrl="/hero-trail/betweentext.png"
+              mediaUrl="/hero-trail/letsfight.png"
               mediaType="image"
               triggerType="inView"
               useInViewOptionsProp={{

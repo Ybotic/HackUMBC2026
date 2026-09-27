@@ -10,7 +10,7 @@ import Image from 'next/image';
 
 const heroImages = Array.from(
   { length: 11 },
-  (_, i) => `/hero-parallax/${(i + 1).toString().padStart(2, '0')}.png`,
+  (_, i) => `/hero-parallax/newimages/float${i + 1}.png`,
 );
 
 export default function HeroSection() {
@@ -60,25 +60,6 @@ export default function HeroSection() {
       ref={scope}
     >
       <motion.div
-        className="absolute top-[30vh] md:top-[25vh] left-1/2 -translate-x-1/2 w-full z-[1] xl:z-0"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.88, delay: 0.3 }}
-      >
-        <div className="flex items-center justify-center gap-3 px-4 md:px-0">
-          <Image
-            src="/logo.svg"
-            alt="Logo"
-            width={32}
-            height={32}
-            className="w-[24px] h-[24px] md:w-[32px] md:h-[32px] -mt-1 md:-mt-2"
-          />
-          <span className="font-megazoid text-2xl md:text-3xl text-white uppercase tracking-wider">
-            mint
-          </span>
-        </div>
-      </motion.div>
-      <motion.div
         className="absolute top-[35vh] md:top-[30vh] left-1/2 -translate-x-1/2 w-full z-[1] xl:z-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -118,7 +99,7 @@ export default function HeroSection() {
         >
           <motion.img
             initial={{ opacity: 0 }}
-            src={heroImages[2]}
+            src="/hero-parallax/newimages/FinalGengarAscii.png"
             className="w-24 sm:w-40 md:w-52 aspect-[3/4] object-cover hover:scale-105 duration-200 cursor-pointer transition-transform rounded-sm"
             alt="NFT artwork"
           />
