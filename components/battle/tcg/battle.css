@@ -2365,6 +2365,64 @@
 }
 
 /* The supplied playmat is the canvas; live cards and controls sit above it. */
+.battle-client.live-match .live-music {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 30;
+  width: min(17rem, 42vw);
+  padding: .65rem .75rem;
+  border: 1px solid rgba(255, 241, 200, .38);
+  border-radius: 12px;
+  color: #fff1d5;
+  background: rgba(18, 23, 34, .92);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .3);
+}
+.battle-client.live-match .live-music h2 {
+  margin: 0 0 .45rem;
+  font-size: .8rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.battle-client.live-match .live-music-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+.battle-client.live-match .live-music button {
+  padding: .25rem .45rem;
+  border: 1px solid rgba(255, 241, 200, .35);
+  border-radius: 5px;
+  color: inherit;
+  background: rgba(255, 255, 255, .05);
+  cursor: pointer;
+  font-size: .7rem;
+}
+.battle-client.live-match .live-music button[aria-pressed='true'] {
+  border-color: #ffe09f;
+  color: #ffe09f;
+  background: rgba(255, 224, 159, .12);
+}
+.battle-client.live-match .live-music button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.battle-client.live-match .live-music p {
+  margin: .45rem 0 0;
+  color: rgba(255, 241, 213, .76);
+  font-size: .68rem;
+  line-height: 1.35;
+}
+.battle-client.live-match .live-music audio { display: none; }
+@media (max-width: 700px) {
+  .battle-client.live-match .live-music {
+    top: 6.5rem;
+    right: auto;
+    left: 1rem;
+    width: min(18rem, calc(100% - 2rem));
+  }
+}
 .battle-client.live-match .battle-stage {
   background-color: #171a22;
   background-image: url('/game-bg.png');

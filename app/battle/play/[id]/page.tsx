@@ -10,6 +10,7 @@ import { useSolana } from '@/lib/providers/SolanaProvider';
 import { PageStateCard } from '@/components/battle/PageStateCard';
 import { BattleLineupSetup } from '@/components/battle/BattleLineupSetup';
 import { BattleNFTCard } from '@/components/battle/BattleNFTCard';
+import { BattleMusicControls } from '@/components/battle/BattleMusicControls';
 import BattleField from '@/components/battle/tcg/BattleField';
 import { Icon } from '@/components/battle/tcg/Icon';
 import {
@@ -544,6 +545,7 @@ export default function BattlePlayPage() {
         data-testid="battle-stage"
         aria-label={`${yourName} versus ${opponentName} live NFT battle`}
       >
+        <BattleMusicControls />
         <BattleField
           handCount={yourLineup.length}
           showStacks={false}
