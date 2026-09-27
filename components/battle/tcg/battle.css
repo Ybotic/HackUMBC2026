@@ -2541,3 +2541,160 @@
 .battle-client.live-match .board-shell {
   display: none;
 }
+
+/* Live matches display the NFT artwork itself; statistics live in the rails/inspect panel. */
+.battle-client.live-match .live-nft-layer { overflow: visible; }
+.battle-client.live-match .battle-image-piece,
+.battle-client.live-match .active-nft-wrap {
+  position: absolute;
+  width: clamp(68px, 7vw, 126px);
+  aspect-ratio: 1;
+  padding: 0;
+  transform: translate(-50%, -50%);
+}
+.battle-client.live-match .battle-image-piece {
+  z-index: 2;
+  overflow: hidden;
+  border: 2px solid rgba(255, 241, 200, .54);
+  border-radius: 12px;
+  background: #202836;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, .55);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: filter 180ms ease, box-shadow 180ms ease;
+}
+.battle-client.live-match .battle-image-piece:hover,
+.battle-client.live-match .battle-image-piece:focus-visible,
+.battle-client.live-match .battle-image-piece.is-active {
+  border-color: #ffe09f;
+  box-shadow: 0 0 18px rgba(255, 214, 128, .55), 0 12px 22px rgba(0, 0, 0, .55);
+}
+.battle-client.live-match .battle-image-piece img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.battle-client.live-match .battle-image-fallback,
+.battle-client.live-match .live-inspect-fallback { display: grid; width: 100%; height: 100%; place-items: center; color: #ddd5c6; font-size: 11px; }
+.battle-client.live-match .battle-image-piece.is-impact { animation: live-card-impact 580ms ease-out; }
+.battle-client.live-match .active-nft-wrap { left: 50%; top: 61%; z-index: 9; pointer-events: auto; }
+.battle-client.live-match .active-nft-wrap > .battle-image-piece { position: relative; width: 100%; height: 100%; transform: none; }
+.battle-client.live-match .live-moves-popover {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 0;
+  z-index: 25;
+  display: none;
+  width: clamp(175px, 17vw, 245px);
+  max-height: min(42vh, 340px);
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid rgba(255, 224, 159, .55);
+  border-radius: 12px;
+  background: rgba(18, 23, 32, .97);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .6);
+}
+.battle-client.live-match .active-nft-wrap:hover .live-moves-popover,
+.battle-client.live-match .active-nft-wrap:focus-within .live-moves-popover,
+.battle-client.live-match .active-nft-wrap.moves-open .live-moves-popover { display: grid; gap: 7px; }
+.battle-client.live-match .live-moves-popover > strong { font-size: 12px; }
+.battle-client.live-match .live-moves-popover button { display: grid; gap: 3px; width: 100%; padding: 7px; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; background: rgba(255,255,255,.06); text-align: left; cursor: pointer; }
+.battle-client.live-match .live-moves-popover button[aria-pressed='true'] { border-color: #ffe09f; }
+.battle-client.live-match .live-moves-popover button:disabled { opacity: .55; cursor: not-allowed; }
+.battle-client.live-match .live-moves-popover small { color: #d0ccc7; line-height: 1.35; }
+.battle-client.live-match .live-inspect {
+  position: absolute;
+  z-index: 24;
+  top: 16%;
+  left: 3%;
+  width: min(270px, 23vw);
+  max-height: 67%;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid rgba(255, 224, 159, .55);
+  border-radius: 13px;
+  background: rgba(18, 23, 32, .97);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .6);
+  animation: focus-panel-in 240ms ease-out both;
+}
+.battle-client.live-match .live-inspect-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 11px; letter-spacing: .1em; }
+.battle-client.live-match .live-inspect-heading button { padding: 0 6px; border: 0; background: none; font-size: 24px; cursor: pointer; }
+.battle-client.live-match .live-inspect > img,
+.battle-client.live-match .live-inspect-fallback { display: block; width: 100%; height: min(18vh, 170px); object-fit: contain; border-radius: 8px; background: #202836; }
+.battle-client.live-match .live-inspect h2 { margin: 8px 0 0; font-size: 15px; }
+.battle-client.live-match .live-inspect p { margin: 5px 0; color: #d3cec6; font-size: 11px; line-height: 1.4; }
+.battle-client.live-match .live-inspect-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin: 8px 0; }
+.battle-client.live-match .live-inspect-stats div { display: flex; justify-content: space-between; gap: 3px; padding: 4px; background: rgba(255,255,255,.07); font-size: 10px; }
+.battle-client.live-match .live-inspect-stats dt { text-transform: uppercase; color: #ccc5ba; }
+.battle-client.live-match .live-inspect-stats dd { margin: 0; font-weight: 700; }
+.battle-client.live-match .live-inspect-switch { width: 100%; padding: 8px; border: 1px solid #ffe09f; border-radius: 6px; background: rgba(255,224,159,.17); cursor: pointer; }
+.battle-client.live-match .live-inspect-roster { display: flex; gap: 4px; margin-top: 9px; }
+.battle-client.live-match .live-inspect-roster button { flex: 1; border: 1px solid #756c5b; border-radius: 5px; background: #222d3b; cursor: pointer; }
+.battle-client.live-match .live-inspect-roster button[aria-pressed='true'] { border-color: #ffe09f; }
+.battle-client.live-match .live-action-dock .live-moves-toggle { grid-column: span 1; }
+.battle-client.live-match .battle-stage[data-revealing='true'] .battle-image-piece { animation: live-nft-reveal 760ms cubic-bezier(.2,.75,.2,1) both; }
+.battle-client.live-match .live-event-vfx {
+  position: absolute;
+  z-index: 18;
+  top: 34%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  width: 190px;
+  height: 120px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: #fff4d8;
+  text-align: center;
+  text-shadow: 0 2px 12px #250d0b;
+}
+.battle-client.live-match .live-event-you { top: 61%; }
+.battle-client.live-match .live-event-vfx > strong { z-index: 2; font-size: 19px; letter-spacing: .16em; animation: damage-pop 760ms ease-out both; }
+.battle-client.live-match .live-event-vfx > b { z-index: 2; color: #ffcf83; font-size: 14px; animation: damage-pop 760ms ease-out both; }
+.battle-client.live-match .live-event-ring {
+  position: absolute;
+  width: 140px;
+  height: 100px;
+  border: 3px solid #ffca80;
+  border-radius: 50%;
+  box-shadow: 0 0 27px #ff8a3a, inset 0 0 24px #ff8a3a;
+  animation: vfx-ring 780ms ease-out both;
+}
+.battle-client.live-match .live-event-beam {
+  position: absolute;
+  bottom: -60px;
+  left: 50%;
+  width: 14px;
+  height: 120px;
+  background: linear-gradient(0deg, transparent, #ffa352, #fff6c5);
+  filter: blur(7px);
+  animation: vfx-beam 650ms ease-out both;
+}
+.battle-client.live-match .live-event-you .live-event-beam { bottom: auto; top: -60px; transform: rotate(180deg); }
+.battle-client.live-match .live-event-switch .live-event-beam { display: none; }
+@keyframes live-nft-reveal { 0% { opacity: 0; transform: translate(-50%, -50%) rotateY(90deg) scale(.85); } 100% { opacity: 1; transform: translate(-50%, -50%) rotateY(0) scale(1); } }
+.battle-client.live-match .battle-stage[data-revealing='true'] .active-nft-wrap > .battle-image-piece { animation: live-nft-active-reveal 760ms ease-out both; }
+@keyframes live-nft-active-reveal { from { opacity: 0; transform: rotateY(90deg) scale(.85); } to { opacity: 1; transform: rotateY(0) scale(1); } }
+@media (max-width: 760px) {
+  .battle-client.live-match .battle-image-piece,
+  .battle-client.live-match .active-nft-wrap { width: clamp(56px, 12vw, 90px); }
+  .battle-client.live-match .opponent-board-nft { top: 31% !important; }
+  .battle-client.live-match .active-nft-wrap { top: 53%; }
+  .battle-client.live-match .local-lineup-nft { top: 72% !important; }
+  .battle-client.live-match .live-inspect { top: 55px; left: 6px; width: min(200px, 45vw); max-height: 68%; }
+  .battle-client.live-match .live-moves-popover { left: auto; right: calc(100% + 8px); width: min(200px, 43vw); }
+}
+@media (max-width: 440px) {
+  .battle-client.live-match .battle-image-piece,
+  .battle-client.live-match .active-nft-wrap { width: clamp(50px, 14vw, 68px); }
+  .battle-client.live-match .live-action-dock { width: 66vw; }
+  .battle-client.live-match .live-action-dock .action-button b { font-size: 9px; }
+  .battle-client.live-match .live-action-dock .action-button small { font-size: 8px; }
+  .battle-client.live-match .live-action-dock .action-message { font-size: 10px; }
+  .battle-client.live-match .live-inspect { max-height: 54%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-client.live-match .battle-image-piece,
+  .battle-client.live-match .live-inspect,
+  .battle-client.live-match .live-event-vfx *,
+  .battle-client.live-match .battle-stage[data-revealing='true'] .battle-image-piece { animation: none !important; transition: none !important; }
+  .battle-client.live-match .live-event-beam,
+  .battle-client.live-match .live-event-ring { display: none; }
+}

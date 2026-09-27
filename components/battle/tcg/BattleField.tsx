@@ -223,8 +223,11 @@ export default function BattleField({
 
       <div className="hand-tray" />
       <div className="hand-caption">
-        <span>YOUR HAND</span>
-        <i /> <b>{handCount} CARDS</b>
+        <span>YOUR LINEUP</span>
+        <i />{' '}
+        <b>
+          {handCount} NFT{handCount === 1 ? '' : 'S'}
+        </b>
       </div>
       <div className="battle-edge-label">{matchLabel}</div>
     </div>
