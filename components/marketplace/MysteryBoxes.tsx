@@ -238,6 +238,7 @@ export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
         newCollectionName,
         imageUrl: imageUrl,
         nftName,
+        description: box.generatedNFT.prompt,
       });
 
       if (result && syncFromSolana) {

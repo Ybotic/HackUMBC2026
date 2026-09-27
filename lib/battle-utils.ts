@@ -25,7 +25,7 @@ export function formatTimeLeft(expiresAt: number): string {
   return `${timeLeft}m left`;
 }
 
-export function getFallbackMoves(nftType: number) {
+export function getFallbackMoves(_nftType: number, cardDescription = '') {
   const fallbackMoves = {
     0: [
       // Fire
@@ -110,7 +110,93 @@ export function getFallbackMoves(nftType: number) {
     ],
   };
 
-  return (
-    fallbackMoves[nftType as keyof typeof fallbackMoves] || fallbackMoves[0]
-  );
+  const description = cardDescription.toLowerCase();
+
+  // The user description takes precedence over the separately assigned game
+  // type, especially for cards whose identity is not elemental (like ghosts).
+  if (
+    /\b(ghost|spirit|phantom|specter|spectre|wraith|haunted|undead)\b/.test(
+      description,
+    )
+  ) {
+    return [
+      {
+        name: 'Spectral Shift',
+        description:
+          'The spirit slips through a solid blow, then reappears nearby to strike before the opponent can react.',
+        iconName: 'Sparkles',
+      },
+      {
+        name: 'Haunting Grasp',
+        description:
+          'An eerie chill rattles the target’s resolve, opening a brief chance for the ghost to attack again.',
+        iconName: 'Heart',
+      },
+      {
+        name: 'Phantom Veil',
+        description:
+          'The phantom fades from sight, avoiding an incoming hit and returning with a sudden spectral counter.',
+        iconName: 'Eye',
+      },
+      {
+        name: 'Ethereal Surge',
+        description:
+          'The ghost gathers lingering spirits into one forceful strike that disrupts the enemy’s next attack.',
+        iconName: 'Zap',
+      },
+    ];
+  }
+
+  if (
+    /\b(fire|flame|fiery|ember|inferno|lava|volcano|phoenix)\b/.test(
+      description,
+    )
+  ) {
+    return fallbackMoves[0];
+  }
+
+  if (
+    /\b(water|ocean|sea|wave|tidal|aquatic|river|aqua|hydro)\b/.test(
+      description,
+    )
+  ) {
+    return fallbackMoves[1];
+  }
+
+  if (
+    /\b(grass|plant|forest|leaf|leaves|vine|thorn|nature|flower)\b/.test(
+      description,
+    )
+  ) {
+    return fallbackMoves[2];
+  }
+
+  // If the description doesn't establish an element, stay neutral instead of
+  // inventing one from the NFT's arbitrary game-type assignment.
+  return [
+    {
+      name: 'Focused Strike',
+      description:
+        'A measured strike targets an opening in the opponent’s guard, creating space for the next move.',
+      iconName: 'Target',
+    },
+    {
+      name: 'Swift Feint',
+      description:
+        'A sudden feint draws out a response, letting the fighter reposition before the opponent can recover.',
+      iconName: 'Wind',
+    },
+    {
+      name: 'Guarded Stance',
+      description:
+        'The card braces for impact, absorbs incoming force, and steadies itself for another exchange.',
+      iconName: 'Shield',
+    },
+    {
+      name: 'Power Surge',
+      description:
+        'A burst of focused energy powers a decisive attack without relying on any particular elemental affinity.',
+      iconName: 'Zap',
+    },
+  ];
 }

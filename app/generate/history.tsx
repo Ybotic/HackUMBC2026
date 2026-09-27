@@ -362,6 +362,7 @@ function ImageCard({ image }: { image: ImageGen }) {
           open={mintOpen}
           setOpen={setMintOpen}
           imageUrl={image.imageUrl}
+          description={image.prompt}
           nftManager={nftManager}
           isInitialized={isInitialized}
           collections={collections}
@@ -376,6 +377,7 @@ function MintDialog({
   open,
   setOpen,
   imageUrl,
+  description,
   nftManager,
   isInitialized,
   collections,
@@ -384,6 +386,7 @@ function MintDialog({
   open: boolean;
   setOpen: (open: boolean) => void;
   imageUrl: string;
+  description: string;
   nftManager: any;
   isInitialized: boolean;
   collections: UserCollection[];
@@ -409,6 +412,7 @@ function MintDialog({
         newCollectionName,
         imageUrl,
         nftName,
+        description,
       });
     } finally {
       setMinting(false);

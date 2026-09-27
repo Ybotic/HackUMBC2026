@@ -101,6 +101,7 @@ export function ImageGenerator() {
         newCollectionName,
         imageUrl: generatedImage.url,
         nftName,
+        description: imageQuery?.prompt ?? form.getValues('prompt'),
       });
     } finally {
       setIsMinting(false);

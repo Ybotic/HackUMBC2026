@@ -124,7 +124,7 @@ export default function BattlePage() {
   const recent = activeBattles?.[0];
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-background">
       <div className="container mx-auto max-w-[1500px] px-4 py-8">
         <header className="mb-8 flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">
@@ -153,7 +153,7 @@ export default function BattlePage() {
             className="w-fit gap-2 px-3 py-1.5 text-xs font-medium"
           >
             <span
-              className="size-1.5 rounded-full bg-primary"
+              className="size-1.5 rounded-full bg-emerald-500"
               aria-hidden="true"
             />
             {nfts === undefined
@@ -419,7 +419,7 @@ export default function BattlePage() {
                                 className="gap-1.5 text-[10px] font-medium"
                               >
                                 <span
-                                  className={`size-1.5 rounded-full ${isYourTurn ? 'bg-primary' : 'bg-muted-foreground/50'}`}
+                                  className={`size-1.5 rounded-full ${isYourTurn ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
                                 />
                                 {isYourTurn ? 'Your turn' : 'Waiting'}
                               </Badge>
@@ -505,7 +505,7 @@ export default function BattlePage() {
                           variant="outline"
                           className={
                             won
-                              ? 'border-primary/30 bg-primary/10 text-primary'
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               : 'text-muted-foreground'
                           }
                         >

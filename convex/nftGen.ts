@@ -64,8 +64,17 @@ export const generateNFTPrompt = internalAction({
   },
   handler: async (ctx, args) => {
     try {
-      const { google } = await import('@ai-sdk/google');
+      const { createOpenRouter } = await import('@openrouter/ai-sdk-provider');
       const { generateText } = await import('ai');
+      const apiKey = process.env.OPENROUTER_API_KEY;
+
+      if (!apiKey) {
+        throw new Error(
+          'OPENROUTER_API_KEY is not configured in the Convex deployment.',
+        );
+      }
+
+      const openrouter = createOpenRouter({ apiKey });
 
       const nftType = NFT_TYPES[args.stats.nftType];
       const category = getRandomElement(CATEGORIES);
@@ -88,7 +97,7 @@ Example style: "A ${category} forged from ${nftType.toLowerCase()} essence in th
 Generate only the character description:`;
 
       const result = await generateText({
-        model: google('gemini-2.0-flash-exp'),
+        model: openrouter.chat('openai/gpt-5.6-luna'),
         prompt,
       });
 

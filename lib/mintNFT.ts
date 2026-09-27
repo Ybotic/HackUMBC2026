@@ -4,6 +4,7 @@ import type { SolanaNFTManager, UserCollection } from '@/lib/solanaNFTManager';
 async function uploadMetadata(
   imageUrl: string,
   name: string,
+  description: string,
 ): Promise<{ image: string; metadata: string }> {
   const response = await fetch('/api/ipfs/upload', {
     method: 'POST',
@@ -12,7 +13,8 @@ async function uploadMetadata(
       url: imageUrl,
       metadata: {
         name,
-        description: `${name}, an AI-generated Mint trading card.`,
+        description:
+          description.trim() || `${name}, an AI-generated Mint trading card.`,
         attributes: [],
       },
     }),
@@ -44,6 +46,7 @@ export async function mintImageAsNFT({
   newCollectionName,
   imageUrl,
   nftName,
+  description,
 }: {
   nftManager: SolanaNFTManager;
   selectedAccount: { address: string };
@@ -51,6 +54,7 @@ export async function mintImageAsNFT({
   newCollectionName: string;
   imageUrl: string;
   nftName: string;
+  description: string;
 }) {
   if (!selectedAccount) {
     toast.error('Wallet not connected');
@@ -69,7 +73,7 @@ export async function mintImageAsNFT({
       collectionId = collection.id;
     }
 
-    const uploaded = await uploadMetadata(imageUrl, nftName);
+    const uploaded = await uploadMetadata(imageUrl, nftName, description);
     const result = await nftManager.mintNFT({
       collectionId: collectionId || undefined,
       name: nftName,
