@@ -27,6 +27,12 @@ function InspectionImage({ src, name }: { src: string | null; name: string }) {
   );
 }
 
+function getEffectivenessLabel(effectiveness?: number): string {
+  if (effectiveness === undefined || effectiveness === 1) return '';
+  if (effectiveness === 0) return ' · NO EFFECT';
+  return effectiveness > 1 ? ' · SUPER EFFECTIVE' : ' · NOT VERY EFFECTIVE';
+}
+
 export default function BattlePlayPage() {
   const params = useParams();
   const battleId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
@@ -990,7 +996,7 @@ export default function BattlePlayPage() {
                           ? move.protectSuccess
                             ? 'PROTECTED'
                             : 'PROTECT FAILED'
-                          : `${move.damage ?? 0} DAMAGE${move.blocked ? ' · BLOCKED' : ''}${move.effectiveness && move.effectiveness !== 1 ? (move.effectiveness > 1 ? ' · SUPER EFFECTIVE' : ' · RESISTED') : ''}${move.wasCritical ? ' · CRITICAL' : ''}`}
+                          : `${move.damage ?? 0} DAMAGE${move.blocked ? ' · BLOCKED' : ''}${getEffectivenessLabel(move.effectiveness)}${move.wasCritical ? ' · CRITICAL' : ''}`}
                     </span>
                     <time dateTime={new Date(move.timestamp).toISOString()}>
                       {new Date(move.timestamp).toLocaleTimeString()}

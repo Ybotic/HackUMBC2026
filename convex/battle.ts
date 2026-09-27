@@ -1,6 +1,6 @@
 import { internalMutation, mutation, query } from './_generated/server';
 import { v } from 'convex/values';
-import { isElementalType } from '../lib/battle-utils';
+import { getTypeEffectiveness, isElementalType } from '../lib/battle-utils';
 import { internal } from './_generated/api';
 
 function eligibleReplacement(lineup: number[], health: number[]) {
@@ -207,18 +207,6 @@ function seededPercent(seed: string): number {
   return Math.abs(hash) % 100;
 }
 
-function typeMultiplier(attackerType: number, defenderType: number): number {
-  if (
-    (attackerType === 0 && defenderType === 2) ||
-    (attackerType === 1 && defenderType === 0) ||
-    (attackerType === 2 && defenderType === 1)
-  ) {
-    return 1.5;
-  }
-  if (attackerType !== defenderType) return 0.65;
-  return 1;
-}
-
 // New matches collect both actions before revealing either one. Protect acts
 // first, then switches, then attacks in descending active-card speed order.
 // Equal speeds favor the lobby creator (player 1). A KO cancels the victim's
@@ -413,18 +401,19 @@ export const submitRoundAction = mutation({
               defender.defense * 0.2,
           ),
         );
-        const effectiveness = typeMultiplier(element, defender.nftType);
-        const damage = protectedSide[target]
-          ? 0
-          : Math.max(
-              1,
-              Math.floor(
-                base *
-                  (0.85 + (roll % 31) / 100) *
-                  effectiveness *
-                  (critical ? 1.5 : 1),
-              ),
-            );
+        const effectiveness = getTypeEffectiveness(element, defender.nftType);
+        const damage =
+          protectedSide[target] || effectiveness === 0
+            ? 0
+            : Math.max(
+                1,
+                Math.floor(
+                  base *
+                    (0.85 + (roll % 31) / 100) *
+                    effectiveness *
+                    (critical ? 1.5 : 1),
+                ),
+              );
         health[target][targetIndex] = Math.max(
           0,
           health[target][targetIndex] - damage,
@@ -437,7 +426,7 @@ export const submitRoundAction = mutation({
           effectiveness,
           damage,
           blocked: protectedSide[target],
-          wasCritical: !protectedSide[target] && critical,
+          wasCritical: !protectedSide[target] && effectiveness > 0 && critical,
           targetHealth: health[target][targetIndex],
         });
         if (health[target][targetIndex] === 0) {
@@ -611,8 +600,12 @@ export const executeTurn = mutation({
     const roll = seededPercent(
       `${battle.battleId}:${battle.gameState.turnNumber + 1}:${args.action}`,
     );
+    const effectiveness = getTypeEffectiveness(
+      attacker.nftType,
+      defender.nftType,
+    );
     const criticalChance = Math.min(35, 5 + Math.floor(attacker.luck / 5));
-    const wasCritical = roll < criticalChance;
+    const wasCritical = effectiveness > 0 && roll < criticalChance;
     const baseDamage = Math.max(
       1,
       Math.floor(
@@ -623,15 +616,15 @@ export const executeTurn = mutation({
       ),
     );
     const variance = 0.85 + (roll % 31) / 100;
-    const damage = Math.max(
-      1,
-      Math.floor(
-        baseDamage *
-          variance *
-          typeMultiplier(attacker.nftType, defender.nftType) *
-          (wasCritical ? 1.5 : 1),
-      ),
-    );
+    const damage =
+      effectiveness === 0
+        ? 0
+        : Math.max(
+            1,
+            Math.floor(
+              baseDamage * variance * effectiveness * (wasCritical ? 1.5 : 1),
+            ),
+          );
 
     const player1Health = isPlayer1
       ? battle.gameState.player1Health
@@ -702,6 +695,7 @@ export const executeTurn = mutation({
           player: args.playerAddress,
           action: args.action,
           damage,
+          effectiveness,
           wasCritical,
           targetHealth: isPlayer1 ? player2Health : player1Health,
           turnId,
