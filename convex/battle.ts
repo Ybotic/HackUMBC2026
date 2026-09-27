@@ -1,5 +1,7 @@
-import { mutation, query } from './_generated/server';
+import { internalMutation, mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import { isElementalType } from '../lib/battle-utils';
+import { internal } from './_generated/api';
 
 function eligibleReplacement(lineup: number[], health: number[]) {
   return lineup.filter((index) => health[index] > 0);
@@ -109,6 +111,12 @@ export const changeActiveCard = mutation({
     if (!isPlayer1 && playerAddress !== battle.player2Address)
       throw new Error('Not a player');
     const state = battle.gameState;
+    if (
+      battle.rulesVersion === 2 &&
+      state.roundChoices &&
+      (state.roundChoices.player1 || state.roundChoices.player2)
+    )
+      throw new Error('Finish the pending round first');
     if (state.currentTurn !== playerAddress || state.pendingTurn)
       throw new Error('Not your turn');
     const lineup = isPlayer1 ? state.player1Lineup : state.player2Lineup;
@@ -129,6 +137,8 @@ export const changeActiveCard = mutation({
     }
     const replacement = roster[cardIndex];
     const forced = activeIndex === undefined;
+    if (battle.rulesVersion === 2 && !forced)
+      throw new Error('Use the Switchout move to change cards');
     const turnNumber = forced ? state.turnNumber : state.turnNumber + 1;
     const turnId = `${battle.battleId}-${turnNumber}${forced ? '-replacement' : ''}`;
     await ctx.db.patch(battle._id, {
@@ -137,6 +147,21 @@ export const changeActiveCard = mutation({
         : { player2NFT: replacement }),
       gameState: {
         ...state,
+        ...(battle.rulesVersion === 2
+          ? {
+              ...(isPlayer1
+                ? {
+                    protectStreak1: state.protectStreak1?.map((value, index) =>
+                      index === activeIndex ? 0 : value,
+                    ),
+                  }
+                : {
+                    protectStreak2: state.protectStreak2?.map((value, index) =>
+                      index === activeIndex ? 0 : value,
+                    ),
+                  }),
+            }
+          : {}),
         ...(isPlayer1
           ? {
               player1Active: cardIndex,
@@ -194,6 +219,322 @@ function typeMultiplier(attackerType: number, defenderType: number): number {
   return 1;
 }
 
+// New matches collect both actions before revealing either one. Protect acts
+// first, then switches, then attacks in descending active-card speed order.
+// Equal speeds favor the lobby creator (player 1). A KO cancels the victim's
+// unresolved action; replacements are chosen before the next round.
+export const submitRoundAction = mutation({
+  args: {
+    battleId: v.string(),
+    playerAddress: v.string(),
+    expectedRound: v.number(),
+    action: v.string(),
+    cardIndex: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const battle = await ctx.db
+      .query('battles')
+      .filter((q) => q.eq(q.field('battleId'), args.battleId))
+      .first();
+    if (
+      !battle ||
+      battle.rulesVersion !== 2 ||
+      battle.gameState.status !== 'active' ||
+      !battle.player1Roster ||
+      !battle.player2Roster
+    )
+      throw new Error('Priority battle is not active');
+    const side =
+      args.playerAddress === battle.player1Address
+        ? 0
+        : args.playerAddress === battle.player2Address
+          ? 1
+          : -1;
+    if (side < 0) throw new Error('Not a player');
+    const state = battle.gameState;
+    if (args.expectedRound !== state.turnNumber + 1)
+      throw new Error('Round changed; choose a move again');
+    if (state.player1Active === undefined || state.player2Active === undefined)
+      throw new Error('Choose a replacement card before the next round');
+    if (
+      !state.player1Lineup ||
+      !state.player2Lineup ||
+      !state.player1CardHealth ||
+      !state.player2CardHealth
+    )
+      throw new Error('Battle lineup is incomplete');
+    const startingActive = [state.player1Active, state.player2Active];
+    const active: Array<number | undefined> = [...startingActive];
+    const rosters = [battle.player1Roster, battle.player2Roster];
+    const lineups = [state.player1Lineup, state.player2Lineup];
+    const health = [
+      state.player1CardHealth.slice(),
+      state.player2CardHealth.slice(),
+    ];
+    const choices = state.roundChoices ?? {};
+    if (side === 0 ? choices.player1 : choices.player2)
+      throw new Error('Action already locked for this round');
+    const actorIndex = startingActive[side];
+    const actor = rosters[side][actorIndex];
+    if (
+      !actor ||
+      !lineups[side]?.includes(actorIndex) ||
+      !((health[side]?.[actorIndex] ?? 0) > 0)
+    )
+      throw new Error('Active card is not available');
+    const move = actor.moves?.find((entry) => entry.name === args.action);
+    if (
+      !move ||
+      !move.kind ||
+      (move.kind === 'attack' &&
+        (!isElementalType(move.element ?? -1) ||
+          move.element !== actor.stats.nftType))
+    )
+      throw new Error('Move is not available to this card');
+    if (move.kind === 'switchout') {
+      if (
+        args.cardIndex === undefined ||
+        !Number.isInteger(args.cardIndex) ||
+        args.cardIndex === actorIndex ||
+        !lineups[side]?.includes(args.cardIndex) ||
+        !((health[side]?.[args.cardIndex] ?? 0) > 0)
+      )
+        throw new Error('Choose a surviving reserve card');
+    } else if (args.cardIndex !== undefined) {
+      throw new Error('Only Switchout selects a reserve');
+    }
+    const choice = {
+      action: args.action,
+      ...(args.cardIndex === undefined ? {} : { cardIndex: args.cardIndex }),
+    };
+    const updated = {
+      player1: side === 0 ? choice : choices.player1,
+      player2: side === 1 ? choice : choices.player2,
+    };
+    if (!updated.player1 || !updated.player2) {
+      // If a player disappears after their opponent commits, finish the
+      // stalled match without credits. A stale scheduled job cannot affect a
+      // subsequent round or a match already resolved by the other player.
+      const roundDeadline = Date.now() + 90_000;
+      await ctx.db.patch(battle._id, {
+        gameState: { ...state, roundChoices: updated, roundDeadline },
+        lastActivity: Date.now(),
+      });
+      await ctx.scheduler.runAfter(90_000, internal.battle.expirePendingRound, {
+        battleId: args.battleId,
+        round: args.expectedRound,
+      });
+      return { resolved: false, round: args.expectedRound };
+    }
+
+    const selected = [updated.player1, updated.player2];
+    const selectedMoves = selected.map((entry, index) => {
+      const selectedMove = rosters[index][startingActive[index]].moves?.find(
+        (item) => item.name === entry.action,
+      );
+      if (!selectedMove?.kind)
+        throw new Error('Move is not available to this card');
+      return selectedMove;
+    });
+    const streaks = [
+      state.protectStreak1?.slice() ?? rosters[0].map(() => 0),
+      state.protectStreak2?.slice() ?? rosters[1].map(() => 0),
+    ];
+    const protectedSide = [false, false];
+    const currentNFT = [battle.player1NFT, battle.player2NFT];
+    const ordered = [0, 1].sort((a, b) => {
+      const priority = (kind: string) =>
+        kind === 'protect' ? 2 : kind === 'switchout' ? 1 : 0;
+      const difference =
+        priority(selectedMoves[b].kind ?? '') -
+        priority(selectedMoves[a].kind ?? '');
+      return (
+        difference ||
+        (selectedMoves[a].kind === 'attack' &&
+        selectedMoves[b].kind === 'attack'
+          ? rosters[b][startingActive[b]].stats.speed -
+            rosters[a][startingActive[a]].stats.speed
+          : 0) ||
+        a - b
+      );
+    });
+    const events: typeof battle.moves = [];
+    let winner: string | undefined;
+    for (const actingSide of ordered) {
+      const target = 1 - actingSide;
+      const oldIndex = active[actingSide];
+      const targetIndex = active[target];
+      if (oldIndex === undefined || targetIndex === undefined) continue;
+      const chosen = selected[actingSide];
+      const selectedMove = selectedMoves[actingSide];
+      const event = {
+        turnNumber: args.expectedRound,
+        turnId: `${battle.battleId}-r${args.expectedRound}-${events.length + 1}`,
+        timestamp: Date.now(),
+        player:
+          actingSide === 0 ? battle.player1Address : battle.player2Address,
+        action: chosen.action,
+        cardIndex: oldIndex,
+      };
+      if (selectedMove.kind === 'protect') {
+        const count = streaks[actingSide][oldIndex] ?? 0;
+        const chance = 100 / 2 ** count;
+        const success =
+          seededPercent(
+            `${battle.battleId}:${args.expectedRound}:${actingSide}:protect`,
+          ) < chance;
+        streaks[actingSide][oldIndex] = count + 1;
+        protectedSide[actingSide] = success;
+        events.push({ ...event, kind: 'protect', protectSuccess: success });
+      } else if (selectedMove.kind === 'switchout') {
+        if (chosen.cardIndex === undefined)
+          throw new Error('Switchout needs a reserve');
+        streaks[actingSide][oldIndex] = 0;
+        active[actingSide] = chosen.cardIndex;
+        currentNFT[actingSide] = rosters[actingSide][chosen.cardIndex];
+        events.push({ ...event, kind: 'switch', cardIndex: chosen.cardIndex });
+      } else {
+        const element = selectedMove.element;
+        if (element === undefined || !isElementalType(element))
+          throw new Error('Attack has no element');
+        streaks[actingSide][oldIndex] = 0;
+        const attacker = currentNFT[actingSide].stats;
+        const defender = currentNFT[target].stats;
+        const roll = seededPercent(
+          `${battle.battleId}:${args.expectedRound}:${actingSide}:${chosen.action}`,
+        );
+        const critical = roll < Math.min(35, 5 + Math.floor(attacker.luck / 5));
+        const base = Math.max(
+          1,
+          Math.floor(
+            attacker.attack * 0.34 +
+              attacker.strength * 0.18 +
+              attacker.intelligence * 0.08 -
+              defender.defense * 0.2,
+          ),
+        );
+        const effectiveness = typeMultiplier(element, defender.nftType);
+        const damage = protectedSide[target]
+          ? 0
+          : Math.max(
+              1,
+              Math.floor(
+                base *
+                  (0.85 + (roll % 31) / 100) *
+                  effectiveness *
+                  (critical ? 1.5 : 1),
+              ),
+            );
+        health[target][targetIndex] = Math.max(
+          0,
+          health[target][targetIndex] - damage,
+        );
+        events.push({
+          ...event,
+          kind: 'attack',
+          targetIndex,
+          moveElement: selectedMove.element,
+          effectiveness,
+          damage,
+          blocked: protectedSide[target],
+          wasCritical: !protectedSide[target] && critical,
+          targetHealth: health[target][targetIndex],
+        });
+        if (health[target][targetIndex] === 0) {
+          if (!eligibleReplacement(lineups[target], health[target]).length) {
+            winner = event.player;
+          } else {
+            active[target] = undefined;
+          }
+        }
+      }
+      if (winner) break;
+    }
+    const activeHealth = (index: number) => {
+      const cardIndex = active[index];
+      return cardIndex === undefined ? 0 : health[index][cardIndex];
+    };
+    await ctx.db.patch(battle._id, {
+      player1NFT: currentNFT[0],
+      player2NFT: currentNFT[1],
+      gameState: {
+        ...state,
+        roundChoices: {},
+        roundDeadline: undefined,
+        protectStreak1: streaks[0],
+        protectStreak2: streaks[1],
+        player1Active: active[0],
+        player2Active: active[1],
+        player1CardHealth: health[0],
+        player2CardHealth: health[1],
+        player1Health: activeHealth(0),
+        player2Health: activeHealth(1),
+        player1MaxHealth: currentNFT[0].stats.maxHealth,
+        player2MaxHealth: currentNFT[1].stats.maxHealth,
+        currentTurn:
+          active[0] === undefined
+            ? battle.player1Address
+            : active[1] === undefined
+              ? battle.player2Address
+              : battle.player1Address,
+        turnNumber: args.expectedRound,
+        status: winner ? 'finished' : 'active',
+        winner,
+      },
+      moves: [...battle.moves, ...events],
+      lastActivity: Date.now(),
+      finishedAt: winner ? Date.now() : undefined,
+    });
+    if (winner) {
+      const winningAddress = winner;
+      const user = await ctx.db
+        .query('users')
+        .withIndex('by_address', (q) => q.eq('address', winningAddress))
+        .first();
+      if (user)
+        await ctx.db.patch(user._id, { credits: (user.credits || 0) + 5 });
+    }
+    return { resolved: true, round: args.expectedRound };
+  },
+});
+
+export const expirePendingRound = internalMutation({
+  args: { battleId: v.string(), round: v.number() },
+  handler: async (ctx, { battleId, round }) => {
+    const battle = await ctx.db
+      .query('battles')
+      .filter((q) => q.eq(q.field('battleId'), battleId))
+      .first();
+    if (
+      !battle ||
+      battle.rulesVersion !== 2 ||
+      battle.gameState.status !== 'active' ||
+      battle.gameState.turnNumber + 1 !== round ||
+      (battle.gameState.roundDeadline ?? Number.POSITIVE_INFINITY) > Date.now()
+    )
+      return;
+    const choices = battle.gameState.roundChoices;
+    const winner =
+      choices?.player1 && !choices.player2
+        ? battle.player1Address
+        : choices?.player2 && !choices.player1
+          ? battle.player2Address
+          : undefined;
+    if (!winner) return;
+    await ctx.db.patch(battle._id, {
+      gameState: {
+        ...battle.gameState,
+        status: 'finished',
+        winner,
+        roundChoices: {},
+        roundDeadline: undefined,
+      },
+      finishedAt: Date.now(),
+      lastActivity: Date.now(),
+    });
+  },
+});
+
 export const executeTurn = mutation({
   args: {
     battleId: v.string(),
@@ -207,6 +548,8 @@ export const executeTurn = mutation({
       .first();
 
     if (!battle) throw new Error('Battle not found');
+    if (battle.rulesVersion === 2)
+      throw new Error('Use round actions for this battle');
     if (battle.gameState.status !== 'active') {
       throw new Error('Battle is not active');
     }
@@ -394,12 +737,39 @@ export const executeTurn = mutation({
 
 export const getBattle = query({
   args: { battleId: v.string() },
-  handler: async (ctx, { battleId }) =>
-    ctx.db
+  handler: async (ctx, { battleId }) => {
+    const battle = await ctx.db
       .query('battles')
       .filter((q) => q.eq(q.field('battleId'), battleId))
-      .first(),
+      .first();
+    return battle && hideRoundChoices(battle);
+  },
 });
+
+function hideRoundChoices<
+  T extends {
+    rulesVersion?: number;
+    gameState: {
+      roundChoices?: {
+        player1?: { action: string; cardIndex?: number };
+        player2?: { action: string; cardIndex?: number };
+      };
+    };
+  },
+>(battle: T): T {
+  if (battle.rulesVersion !== 2) return battle;
+  const choices = battle.gameState.roundChoices;
+  return {
+    ...battle,
+    gameState: {
+      ...battle.gameState,
+      roundChoices: {
+        ...(choices?.player1 ? { player1: { action: 'Selected' } } : {}),
+        ...(choices?.player2 ? { player2: { action: 'Selected' } } : {}),
+      },
+    },
+  };
+}
 
 export const getBattleWithNFTData = query({
   args: { battleId: v.string() },
@@ -447,7 +817,7 @@ export const getBattleWithNFTData = query({
       fetchRoster(battle.player2Roster),
     ]);
     return {
-      ...battle,
+      ...hideRoundChoices(battle),
       player1NFTData,
       player2NFTData,
       player1RosterData,
@@ -471,7 +841,8 @@ export const getUserActiveBattles = query({
     ]);
     return [...asPlayer1, ...asPlayer2]
       .filter((battle) => battle.gameState.status !== 'finished')
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(hideRoundChoices);
   },
 });
 
@@ -491,6 +862,7 @@ export const getUserBattleHistory = query({
     return [...asPlayer1, ...asPlayer2]
       .filter((battle) => battle.gameState.status === 'finished')
       .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
-      .slice(0, 50);
+      .slice(0, 50)
+      .map(hideRoundChoices);
   },
 });
