@@ -580,36 +580,45 @@ export default function BattlePlayPage() {
               />
             </div>
           )}
-          {yourLineup.map((cardIndex, index) => (
-            <BattleNFTCard
-              key={`lineup-${cardIndex}`}
-              className={`local-lineup-nft${
-                needsReplacement &&
-                yourTurn &&
-                !executing &&
-                (yourCardHealth[cardIndex] ?? 0) > 0
-                  ? ' is-choosable'
-                  : ''
-              }`}
-              card={yourRoster[cardIndex]}
-              metadata={yourRosterData[cardIndex]?.itemMetadata}
-              health={yourCardHealth[cardIndex]}
-              label={
-                cardIndex === yourActiveIndex
-                  ? 'active lineup card'
-                  : switchTarget === cardIndex
-                    ? 'reserve card, selected for switchout'
-                    : 'reserve card'
-              }
-              active={cardIndex === yourActiveIndex}
-              selected={switchTarget === cardIndex}
-              style={{
-                left: `${49 + (index - (yourLineup.length - 1) / 2) * 14}%`,
-                top: '80%',
-              }}
-              onInspect={(trigger) => openInspection(trigger, 'you', cardIndex)}
-            />
-          ))}
+          {yourLineup.map((cardIndex, index) => {
+            const lineupOffset = index - (yourLineup.length - 1) / 2;
+            return (
+              <BattleNFTCard
+                key={`lineup-${cardIndex}`}
+                className={`local-lineup-nft${
+                  needsReplacement &&
+                  yourTurn &&
+                  !executing &&
+                  (yourCardHealth[cardIndex] ?? 0) > 0
+                    ? ' is-choosable'
+                    : ''
+                }`}
+                card={yourRoster[cardIndex]}
+                metadata={yourRosterData[cardIndex]?.itemMetadata}
+                health={yourCardHealth[cardIndex]}
+                label={
+                  cardIndex === yourActiveIndex
+                    ? 'active lineup card'
+                    : switchTarget === cardIndex
+                      ? 'reserve card, selected for switchout'
+                      : 'reserve card'
+                }
+                active={cardIndex === yourActiveIndex}
+                selected={switchTarget === cardIndex}
+                style={
+                  {
+                    left: `${49 + lineupOffset * 14}%`,
+                    top: '80%',
+                    '--lineup-yaw': `${-lineupOffset * 7}deg`,
+                    '--lineup-roll': `${-lineupOffset * 3}deg`,
+                  } as CSSProperties
+                }
+                onInspect={(trigger) =>
+                  openInspection(trigger, 'you', cardIndex)
+                }
+              />
+            );
+          })}
           {rosterBattle &&
             opponentLineup.map((cardIndex, index) => (
               <BattleNFTCard

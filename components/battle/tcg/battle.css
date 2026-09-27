@@ -2382,7 +2382,11 @@
 }
 
 /* Live matches display the NFT artwork itself; statistics live in the rails/inspect panel. */
-.battle-client.live-match .live-nft-layer { overflow: visible; }
+.battle-client.live-match .live-nft-layer {
+  overflow: visible;
+  perspective: 1100px;
+  perspective-origin: 50% 72%;
+}
 .battle-client.live-match .battle-image-piece,
 .battle-client.live-match .active-nft-wrap {
   position: absolute;
@@ -2410,6 +2414,12 @@
   pointer-events: auto;
   cursor: pointer;
   transition: filter 180ms ease, box-shadow 180ms ease;
+}
+.battle-client.live-match .local-lineup-nft {
+  --lineup-pitch: 18deg;
+  transform: translate(-50%, -50%) rotateX(var(--lineup-pitch))
+    rotateY(var(--lineup-yaw, 0deg)) rotateZ(var(--lineup-roll, 0deg));
+  transform-origin: 50% 92%;
 }
 .battle-client.live-match .battle-image-piece:hover,
 .battle-client.live-match .battle-image-piece:focus-visible,
@@ -2538,7 +2548,19 @@
 .battle-client.live-match .live-event-switch .live-event-beam,
 .battle-client.live-match .live-event-protect .live-event-beam,
 .battle-client.live-match .live-event-vfx.is-blocked .live-event-beam { display: none; }
-@keyframes live-nft-reveal { 0% { opacity: 0; transform: translate(-50%, -50%) rotateY(90deg) scale(.85); } 100% { opacity: 1; transform: translate(-50%, -50%) rotateY(0) scale(1); } }
+@keyframes live-nft-reveal {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotateX(var(--lineup-pitch, 0deg))
+      rotateY(calc(var(--lineup-yaw, 0deg) + 90deg))
+      rotateZ(var(--lineup-roll, 0deg)) scale(.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotateX(var(--lineup-pitch, 0deg))
+      rotateY(var(--lineup-yaw, 0deg)) rotateZ(var(--lineup-roll, 0deg)) scale(1);
+  }
+}
 .battle-client.live-match .battle-stage[data-revealing='true'] .active-nft-wrap > .battle-image-piece { animation: live-nft-active-reveal 760ms ease-out both; }
 @keyframes live-nft-active-reveal { from { opacity: 0; transform: rotateY(90deg) scale(.85); } to { opacity: 1; transform: rotateY(0) scale(1); } }
 @media (max-width: 760px) {
