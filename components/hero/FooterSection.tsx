@@ -13,13 +13,13 @@ export default function FooterSection() {
   return (
     <footer className="sticky z-0 bottom-0 left-0 w-full h-screen bg-[#1f1f1f] flex justify-center items-center">
       <div className="relative overflow-hidden w-full h-full flex flex-col md:flex-row items-center">
-        <div className="w-full h-[30vh] min-h-48 flex items-center justify-center md:h-full md:w-1/2 md:justify-end md:pr-10 lg:pr-16">
+        <div className="w-full h-[30vh] min-h-48 flex items-center justify-center md:h-full md:w-1/2">
           <ParticleRose
             artFadeRef={artFadeRef}
             artUrl="/hero-footer/newgengar.jpg"
             intro={false}
             mode="art"
-            className="w-[min(72vw,24rem)] md:w-[min(40vw,35rem)]"
+            className="w-[min(86.4vw,28.8rem)] md:w-[min(48vw,42rem)]"
           />
         </div>
 
