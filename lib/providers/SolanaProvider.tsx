@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ClientProvider, useClient } from '@solana/react';
 import {
   useConnect,
@@ -37,6 +43,7 @@ interface SolanaContextValue {
 const SolanaContext = createContext<SolanaContextValue | undefined>(undefined);
 
 function SolanaWalletState({ children }: { children: ReactNode }) {
+  const [hasHydrated, setHasHydrated] = useState(false);
   const client = useClient<SolanaClient>();
   const status = useWalletStatus(client);
   const isInitialized = useIsWalletReady(client);
@@ -92,18 +99,26 @@ function SolanaWalletState({ children }: { children: ReactNode }) {
 
   const actionError = connect.error ?? disconnect.error;
 
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
   return (
     <SolanaContext.Provider
       value={{
-        isInitialized,
-        isReady: status === 'connected' && !!selectedAccount,
-        isConnecting: status === 'connecting' || status === 'reconnecting',
-        error: actionError instanceof Error ? actionError.message : null,
-        wallets,
-        accounts,
-        selectedAccount,
-        selectedAccountIndex,
-        signer: connected?.signer ?? null,
+        isInitialized: hasHydrated && isInitialized,
+        isReady: hasHydrated && status === 'connected' && !!selectedAccount,
+        isConnecting:
+          hasHydrated && (status === 'connecting' || status === 'reconnecting'),
+        error:
+          hasHydrated && actionError instanceof Error
+            ? actionError.message
+            : null,
+        wallets: hasHydrated ? wallets : [],
+        accounts: hasHydrated ? accounts : [],
+        selectedAccount: hasHydrated ? selectedAccount : null,
+        selectedAccountIndex: hasHydrated ? selectedAccountIndex : 0,
+        signer: hasHydrated ? (connected?.signer ?? null) : null,
         connectWallet,
         disconnectWallet,
       }}
