@@ -22,15 +22,18 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
-import { Coins, Package, Gift, Sparkles } from 'lucide-react';
+import { Check, Coins, Package, Gift, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  MINT_CLAIM_TTL_MS,
   MYSTERY_BOX_TIERS,
   NFT_TYPES,
   NFT_TYPE_COLORS,
 } from '@/lib/constants/marketplace';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -63,6 +66,13 @@ export function MysteryBoxes({
   const updateBoxImageMutation = useMutation(
     api.marketplace.updateMysteryBoxImage,
   );
+  const claimMintMutation = useMutation(api.marketplace.claimMysteryBoxMint);
+  const completeMintMutation = useMutation(
+    api.marketplace.completeMysteryBoxMint,
+  );
+  const releaseMintMutation = useMutation(
+    api.marketplace.releaseMysteryBoxMint,
+  );
 
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -70,6 +80,7 @@ export function MysteryBoxes({
     new Set(),
   );
   const [mintingBox, setMintingBox] = useState<string | null>(null);
+  const [mintDialogBox, setMintDialogBox] = useState<string | null>(null);
   const [collections, setCollections] = useState<UserCollection[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [newCollectionName, setNewCollectionName] = useState<string>('');
@@ -229,11 +240,23 @@ export function MysteryBoxes({
 
   const handleMint = async (box: any) => {
     const imageUrl = box.generatedNFT?.imageUrl;
-    if (!imageUrl || !selectedAccount) return;
+    if (!imageUrl || !selectedAccount || box.mintStatus === 'minted') return;
 
     setMintingBox(box._id);
     try {
-      const result = await mintImageAsNFT({
+      await claimMintMutation({
+        boxId: box._id,
+        purchaserAddress: userAddress,
+      });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to mint NFT');
+      setMintingBox(null);
+      return;
+    }
+
+    let result: Awaited<ReturnType<typeof mintImageAsNFT>> = null;
+    try {
+      result = await mintImageAsNFT({
         nftManager,
         selectedAccount,
         selectedCollectionId,
@@ -242,22 +265,36 @@ export function MysteryBoxes({
         nftName,
         description: box.generatedNFT.prompt,
       });
-
-      if (result && syncFromSolana) {
-        const syncResult = await syncFromSolana({
-          expectedItemId: result.itemId,
-        });
-        if (!syncResult.success) {
-          toast.info(
-            'Mint confirmed. Dashboard sync is delayed; use Sync NFTs to retry in a few seconds.',
-          );
-        }
-      }
-      toast.success('NFT minted successfully!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to mint NFT');
     } finally {
+      if (result) {
+        await completeMintMutation({
+          boxId: box._id,
+          purchaserAddress: userAddress,
+          itemId: result.itemId,
+        }).catch(console.error);
+      } else {
+        await releaseMintMutation({
+          boxId: box._id,
+          purchaserAddress: userAddress,
+        }).catch(console.error);
+      }
       setMintingBox(null);
+    }
+
+    if (!result) return;
+
+    setMintDialogBox(null);
+    setNftName('');
+
+    if (syncFromSolana) {
+      const syncResult = await syncFromSolana({
+        expectedItemId: result.itemId,
+      });
+      if (!syncResult.success) {
+        toast.info(
+          'Mint confirmed. Dashboard sync is delayed; use Sync NFTs to retry in a few seconds.',
+        );
+      }
     }
   };
 
@@ -337,154 +374,204 @@ export function MysteryBoxes({
       <Separator />
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Your Mystery Boxes</h3>
+        <div className="flex items-baseline justify-between mb-4">
+          <h3 className="text-lg font-semibold">Your Mystery Boxes</h3>
+          {userBoxes && userBoxes.length > 0 && (
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {userBoxes.length}
+            </span>
+          )}
+        </div>
         {!userBoxes || userBoxes.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h4 className="text-lg font-semibold mb-2">No Mystery Boxes</h4>
-            <p className="text-muted-foreground">
-              Purchase a mystery box above to get started!
+          <div className="text-center py-12 rounded-xl border border-dashed">
+            <Package
+              className="h-10 w-10 mx-auto text-muted-foreground/60 mb-3"
+              strokeWidth={1.5}
+            />
+            <p className="text-sm text-muted-foreground">
+              No mystery boxes yet
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {userBoxes.map((box: any) => {
               const tierInfo =
                 MYSTERY_BOX_TIERS[box.tier as keyof typeof MYSTERY_BOX_TIERS];
               const Icon = tierInfo.icon;
+              const nft = box.generatedNFT;
               const isOpening = opening === box._id;
-              const hasImage = box.generatedNFT?.imageUrl;
-              const isGeneratingImg = generatingImages.has(box._id);
+              const hasImage = Boolean(nft?.imageUrl);
+              const isUnopened = box.status === 'unopened';
+              const isPending = !isUnopened && !hasImage;
               const isMinting = mintingBox === box._id;
+              const isMinted = box.mintStatus === 'minted';
+              const isMintLocked =
+                !isMinting &&
+                box.mintStatus === 'minting' &&
+                Date.now() - (box.mintStartedAt ?? 0) < MINT_CLAIM_TTL_MS;
+              const canMint = hasImage && !isMinted && !isMintLocked;
 
               return (
-                <Card key={box._id} className={`${tierInfo.bgColor} border`}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className={`h-6 w-6 ${tierInfo.color}`} />
-                        <div>
-                          <CardTitle className="text-base">
-                            {tierInfo.name}
-                          </CardTitle>
-                          <CardDescription>
-                            Purchased{' '}
-                            {formatDistanceToNow(new Date(box.purchasedAt), {
-                              addSuffix: true,
-                            })}
-                          </CardDescription>
+                <Card
+                  key={box._id}
+                  className="group overflow-hidden p-0 gap-0 transition-shadow hover:shadow-md"
+                >
+                  <div className="relative aspect-square bg-muted/40 border-b overflow-hidden">
+                    {hasImage ? (
+                      <Image
+                        src={nft.imageUrl}
+                        alt={tierInfo.name}
+                        fill
+                        sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      />
+                    ) : isPending ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Skeleton className="absolute inset-0 rounded-none bg-muted" />
+                        <Loader2 className="relative h-5 w-5 animate-spin text-muted-foreground/70" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon
+                          className={`h-12 w-12 ${tierInfo.color} opacity-80`}
+                          strokeWidth={1.25}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {tierInfo.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(box.purchasedAt), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+                      {nft && (
+                        <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                          {nft.multiplier.toFixed(2)}x
+                        </span>
+                      )}
+                    </div>
+
+                    {nft?.stats && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className={`h-2 w-2 rounded-full ${NFT_TYPE_COLORS[nft.stats.nftType as keyof typeof NFT_TYPE_COLORS]}`}
+                            />
+                            {NFT_TYPES[nft.stats.nftType]}
+                          </span>
+                          <span className="text-muted-foreground tabular-nums">
+                            {nft.stats.maxHealth} HP
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-border text-center">
+                          {[
+                            ['ATK', nft.stats.attack],
+                            ['DEF', nft.stats.defense],
+                            ['SPD', nft.stats.speed],
+                            ['STR', nft.stats.strength],
+                            ['INT', nft.stats.intelligence],
+                            ['LCK', nft.stats.luck],
+                          ].map(([label, value]) => (
+                            <div key={label} className="bg-card py-2">
+                              <div className="text-[10px] tracking-wider text-muted-foreground">
+                                {label}
+                              </div>
+                              <div className="text-sm font-medium tabular-nums">
+                                {value}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <Badge
-                        variant={
-                          box.status === 'unopened'
-                            ? 'default'
-                            : box.status === 'generating'
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                      >
-                        {box.status === 'unopened'
-                          ? 'Ready to Open'
-                          : box.status === 'generating'
-                            ? 'Generating NFT...'
-                            : 'Opened'}
-                      </Badge>
-                    </div>
-                  </CardHeader>
+                    )}
 
-                  <CardContent className="space-y-4">
-                    {box.status === 'unopened' && (
+                    {isUnopened && (
                       <Button
                         onClick={() => handleOpen(box._id)}
                         disabled={isOpening}
                         className="w-full"
+                        size="sm"
                       >
                         {isOpening ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                            Opening...
-                          </>
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            <Gift className="h-4 w-4 mr-2" />
-                            Open Box
+                            <Gift className="h-4 w-4" />
+                            Open
                           </>
                         )}
                       </Button>
                     )}
 
-                    {box.status === 'generating' && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <Sparkles className="h-4 w-4 animate-pulse text-yellow-500" />
-                          <span className="text-sm font-medium">
-                            AI is crafting your unique NFT...
-                          </span>
-                        </div>
-                        <div className="flex justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-                        </div>
-                      </div>
+                    {hasImage && isMinted && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        disabled
+                      >
+                        <Check className="h-4 w-4" />
+                        Minted
+                      </Button>
                     )}
 
-                    {box.status === 'opened' && box.generatedNFT && (
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-center mb-2">
-                            🎉 Generated NFT
+                    {hasImage && isMintLocked && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        disabled
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Minting
+                      </Button>
+                    )}
+
+                    {canMint && (
+                      <Dialog
+                        open={mintDialogBox === box._id}
+                        onOpenChange={(open) =>
+                          setMintDialogBox(open ? box._id : null)
+                        }
+                      >
+                        <DialogTrigger asChild>
+                          <Button size="sm" className="w-full">
+                            Mint NFT
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-sm">
+                          <DialogHeader>
+                            <DialogTitle>Mint NFT</DialogTitle>
+                            <DialogDescription>
+                              Choose a collection and give it a name.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="relative aspect-square w-full overflow-hidden rounded-lg border bg-muted/40">
+                            <Image
+                              src={nft.imageUrl}
+                              alt={tierInfo.name}
+                              fill
+                              sizes="384px"
+                              className="object-cover"
+                            />
                           </div>
-                          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                            {box.generatedNFT.prompt}
-                          </div>
-                        </div>
 
-                        <div className="flex items-center justify-center gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full ${NFT_TYPE_COLORS[box.generatedNFT.stats.nftType as keyof typeof NFT_TYPE_COLORS]}`}
-                          />
-                          <span className="text-xs">
-                            {NFT_TYPES[box.generatedNFT.stats.nftType]}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {box.generatedNFT.multiplier.toFixed(2)}x
-                          </Badge>
-                        </div>
-
-                        {/* Image Section */}
-                        {!hasImage && isGeneratingImg && (
-                          <div className="text-center py-4 bg-muted/30 rounded-lg border-2 border-dashed border-yellow-500/50">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-center gap-2">
-                                <Sparkles className="h-5 w-5 animate-pulse text-yellow-500" />
-                                <span className="text-sm font-medium">
-                                  Creating your NFT artwork...
-                                </span>
-                              </div>
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mx-auto" />
-                            </div>
-                          </div>
-                        )}
-
-                        {hasImage && (
-                          <div className="space-y-4">
-                            <div className="relative aspect-square max-w-xs mx-auto">
-                              <Image
-                                src={box.generatedNFT.imageUrl}
-                                alt="Generated NFT"
-                                fill
-                                className="object-cover rounded-lg"
-                              />
-                            </div>
-
-                            {/* Minting Section */}
-                            <div className="space-y-3">
-                              <div className="text-sm font-medium text-primary flex items-center justify-center gap-2">
-                                <Package className="h-4 w-4" />
-                                Mint as NFT
-                              </div>
-
-                              {collections.length > 0 ? (
+                          <div className="space-y-3">
+                            {collections.length > 0 && (
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">
+                                  Collection
+                                </Label>
                                 <Select
                                   onValueChange={setSelectedCollectionId}
                                   value={selectedCollectionId}
@@ -501,109 +588,64 @@ export function MysteryBoxes({
                                       </SelectItem>
                                     ))}
                                     <SelectItem value="new">
-                                      ✨ Create new collection
+                                      New collection
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                                  No collections found. Create a new one below.
-                                </p>
-                              )}
+                              </div>
+                            )}
 
-                              {(selectedCollectionId === 'new' ||
-                                collections.length === 0) && (
+                            {(selectedCollectionId === 'new' ||
+                              collections.length === 0) && (
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">
+                                  New collection name
+                                </Label>
                                 <Input
-                                  placeholder="Enter collection name..."
+                                  placeholder="My collection"
                                   value={newCollectionName}
                                   onChange={(e) =>
                                     setNewCollectionName(e.target.value)
                                   }
                                 />
-                              )}
+                              </div>
+                            )}
 
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">
+                                Name
+                              </Label>
                               <Input
-                                placeholder="Enter NFT name..."
+                                placeholder="NFT name"
                                 value={nftName}
                                 onChange={(e) => setNftName(e.target.value)}
                               />
-
-                              <Button
-                                onClick={() => handleMint(box)}
-                                disabled={
-                                  isMinting ||
-                                  (!selectedCollectionId &&
-                                    !newCollectionName.trim()) ||
-                                  !nftName.trim()
-                                }
-                                className="w-full"
-                              >
-                                {isMinting ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                                    Minting...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Package className="h-4 w-4 mr-2" />
-                                    Mint NFT
-                                  </>
-                                )}
-                              </Button>
                             </div>
                           </div>
-                        )}
 
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                            >
-                              View Stats
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Generated NFT Stats</DialogTitle>
-                              <DialogDescription>
-                                {box.generatedNFT.prompt}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid grid-cols-2 gap-4 mt-4">
-                              <Badge variant="outline">
-                                Attack: {box.generatedNFT.stats.attack}
-                              </Badge>
-                              <Badge variant="outline">
-                                Defense: {box.generatedNFT.stats.defense}
-                              </Badge>
-                              <Badge variant="outline">
-                                Intelligence:{' '}
-                                {box.generatedNFT.stats.intelligence}
-                              </Badge>
-                              <Badge variant="outline">
-                                Luck: {box.generatedNFT.stats.luck}
-                              </Badge>
-                              <Badge variant="outline">
-                                Speed: {box.generatedNFT.stats.speed}
-                              </Badge>
-                              <Badge variant="outline">
-                                Strength: {box.generatedNFT.stats.strength}
-                              </Badge>
-                              <Badge variant="outline">
-                                Max Health: {box.generatedNFT.stats.maxHealth}
-                              </Badge>
-                              <Badge variant="outline">
-                                Multiplier:{' '}
-                                {box.generatedNFT.multiplier.toFixed(2)}x
-                              </Badge>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
+                          <Button
+                            onClick={() => handleMint(box)}
+                            disabled={
+                              isMinting ||
+                              (!selectedCollectionId &&
+                                !newCollectionName.trim()) ||
+                              !nftName.trim()
+                            }
+                            className="w-full"
+                          >
+                            {isMinting ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Minting
+                              </>
+                            ) : (
+                              'Mint'
+                            )}
+                          </Button>
+                        </DialogContent>
+                      </Dialog>
                     )}
-                  </CardContent>
+                  </div>
                 </Card>
               );
             })}
