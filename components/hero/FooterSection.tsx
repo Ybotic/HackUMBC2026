@@ -1,23 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRef } from 'react';
+import ParticleRose from '@/components/hero/particle-rose';
+import newGengar from '@/newimages/newgengar.jpg';
 
 export default function FooterSection() {
+  const artFadeRef = useRef(0);
+
   return (
     <footer className="sticky z-0 bottom-0 left-0 w-full h-screen bg-[#1f1f1f] flex justify-center items-center">
       <div className="relative overflow-hidden w-full h-full flex flex-col md:flex-row items-center">
-        <div className="hidden md:block md:w-1/2 relative h-full">
-          <Image
-            src="/footer-art.png"
-            alt="Footer Art"
-            fill
-            className="object-cover"
-            priority
+        <div className="w-full h-[30vh] min-h-48 flex items-center justify-center md:h-full md:w-1/2 md:justify-end md:pr-10 lg:pr-16">
+          <ParticleRose
+            artFadeRef={artFadeRef}
+            artUrl={newGengar.src}
+            intro={false}
+            mode="art"
+            className="w-[min(72vw,24rem)] md:w-[min(40vw,35rem)]"
           />
         </div>
 
-        <div className="w-full md:w-1/2 flex flex-col justify-center items-center h-full px-4 md:pr-12">
+        <div className="w-full flex-1 min-h-0 md:flex-none md:w-1/2 md:h-full flex flex-col justify-center items-center px-4 md:pr-12">
           <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <h1 className="text-[80px] sm:text-[60px] md:text-[100px] lg:text-[140px] xl:text-[180px] 2xl:text-[220px] font-garamond font-bold uppercase tracking-tighter text-white leading-none select-none">
               MINT

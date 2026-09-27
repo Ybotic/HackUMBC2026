@@ -181,14 +181,6 @@ export default function HeroSection() {
             alt="NFT artwork"
           />
         </FloatingElement>
-        <FloatingElement depth={4} className="top-[83%] left-[64%]">
-          <motion.img
-            initial={{ opacity: 0 }}
-            src="/hero-parallax/newimages/FinalGengarAscii.png"
-            className="w-20 sm:w-28 md:w-36 aspect-[4/3] object-contain hover:scale-105 duration-200 cursor-pointer transition-transform rounded-sm"
-            alt="Gengar ASCII artwork"
-          />
-        </FloatingElement>
       </Floating>
 
       <motion.button
