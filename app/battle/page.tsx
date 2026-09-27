@@ -111,7 +111,7 @@ export default function BattlePage() {
           <h1 className="mint-heading" style={{ margin: '10px 0' }}>
             Your cards.
             <br />
-            <span style={{ color: '#bafc9c' }}>Your move.</span>
+            <span style={{ color: '#0086F0' }}>Your move.</span>
           </h1>
           <p className="mint-muted">
             Face off with an original card from your collection. One card each.
@@ -309,7 +309,7 @@ export default function BattlePage() {
               <span className="mint-overline">MATCH ARCHIVE</span>
               <h2 style={{ fontSize: 22, marginTop: 5 }}>Past battles</h2>
             </div>
-            <Swords size={22} color="#bafc9c" />
+            <Swords size={22} color="#FC1F77" />
           </div>
           {history === undefined ? (
             <p className="mint-muted">Loading results...</p>
