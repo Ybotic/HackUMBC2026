@@ -6,6 +6,33 @@ import { api } from '@/convex/_generated/api';
 import { useSolana } from '@/lib/providers/SolanaProvider';
 import { useSolanaNFT } from '@/lib/providers/SolanaNFTProvider';
 
+function toConvexSerializable(value: unknown): unknown {
+  if (typeof value === 'bigint') {
+    // Solana account fields are often unsigned u64s, while Convex only accepts
+    // signed 64-bit integers. Keep the full value as a decimal string.
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(toConvexSerializable);
+  }
+
+  if (value instanceof Uint8Array) {
+    return Array.from(value);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        toConvexSerializable(nestedValue),
+      ]),
+    );
+  }
+
+  return value;
+}
+
 export function useNFTs() {
   const { isReady, selectedAccount } = useSolana();
   const { nftManager, isInitialized } = useSolanaNFT();
@@ -48,10 +75,18 @@ export function useNFTs() {
       await initializeUser();
       const solanaNFTs = await nftManager.getUserNFTs(address);
       const solanaCollections = await nftManager.getUserCollections(address);
+      const serializableNFTs = solanaNFTs.map((nft) => ({
+        ...nft,
+        itemDetails: toConvexSerializable(nft.itemDetails),
+      }));
+      const serializableCollections = solanaCollections.map((collection) => ({
+        ...collection,
+        details: toConvexSerializable(collection.details),
+      }));
 
       await Promise.all([
-        syncUserNFTs({ address, nfts: solanaNFTs }),
-        syncUserCollections({ address, collections: solanaCollections }),
+        syncUserNFTs({ address, nfts: serializableNFTs }),
+        syncUserCollections({ address, collections: serializableCollections }),
       ]);
 
       return {

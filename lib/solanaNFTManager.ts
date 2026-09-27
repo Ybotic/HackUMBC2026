@@ -55,8 +55,29 @@ export interface NFTMintedResult {
 
 const READ_CACHE_TTL_MS = 30_000;
 const RPC_RATE_LIMIT_COOLDOWN_MS = 30_000;
+const COLLECTION_FETCH_TIMEOUT_MS = 20_000;
+type CoreCollectionAccount = Awaited<ReturnType<typeof fetchCollection>>;
 
 class RpcCooldownError extends Error {}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
 
 function isRateLimitError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -98,6 +119,10 @@ export class SolanaNFTManager {
     { expiresAt: number; value: unknown }
   >();
   private readonly pendingReads = new Map<string, Promise<unknown>>();
+  private readonly collectionReadCache = new Map<
+    string,
+    { expiresAt: number; value: CoreCollectionAccount }
+  >();
   private rpcReadQueue: Promise<void> = Promise.resolve();
   private rpcCooldownUntil = 0;
 
@@ -164,6 +189,7 @@ export class SolanaNFTManager {
     if (!userAddress) return;
     this.readCache.delete(`nfts:${userAddress}`);
     this.readCache.delete(`collections:${userAddress}`);
+    this.collectionReadCache.clear();
   }
 
   private createUmiSigner(umi: ReturnType<typeof createUmi>): Signer {
@@ -311,7 +337,7 @@ export class SolanaNFTManager {
       const collections = await this.runRpcRead(() =>
         fetchCollectionsByUpdateAuthority(umi, publicKey(userAddress)),
       );
-      return Promise.all(
+      const results = await Promise.all(
         collections.map(async (collection) => ({
           id: collection.publicKey.toString(),
           owner: collection.updateAuthority.toString(),
@@ -319,6 +345,16 @@ export class SolanaNFTManager {
           metadata: await fetchJson(collection.uri),
         })),
       );
+
+      const expiresAt = Date.now() + READ_CACHE_TTL_MS;
+      for (const collection of collections) {
+        this.collectionReadCache.set(collection.publicKey.toString(), {
+          expiresAt,
+          value: collection,
+        });
+      }
+
+      return results;
     });
   }
 
@@ -354,9 +390,24 @@ export class SolanaNFTManager {
   }): Promise<NFTMintedResult> {
     const umi = this.getUmi(true);
     const asset = generateSigner(umi);
-    const collection = collectionId
-      ? await fetchCollection(umi, publicKey(collectionId))
-      : undefined;
+    let collection: CoreCollectionAccount | undefined;
+    if (collectionId) {
+      const cachedCollection = this.collectionReadCache.get(collectionId);
+      if (cachedCollection && cachedCollection.expiresAt > Date.now()) {
+        collection = cachedCollection.value;
+      } else {
+        if (cachedCollection) this.collectionReadCache.delete(collectionId);
+        collection = await withTimeout(
+          fetchCollection(umi, publicKey(collectionId)),
+          COLLECTION_FETCH_TIMEOUT_MS,
+          'The Solana RPC did not respond while loading this collection. Check your network and try again.',
+        );
+        this.collectionReadCache.set(collectionId, {
+          expiresAt: Date.now() + READ_CACHE_TTL_MS,
+          value: collection,
+        });
+      }
+    }
     const result = await create(umi, {
       asset,
       collection,
