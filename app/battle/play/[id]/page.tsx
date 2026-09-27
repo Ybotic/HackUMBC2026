@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import '@/components/battle/tcg/battle.css';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -27,11 +27,17 @@ function InspectionImage({ src, name }: { src: string | null; name: string }) {
   );
 }
 
-function getEffectivenessLabel(effectiveness?: number): string {
-  if (effectiveness === undefined || effectiveness === 1) return '';
-  if (effectiveness === 0) return ' · NO EFFECT';
-  return effectiveness > 1 ? ' · SUPER EFFECTIVE' : ' · NOT VERY EFFECTIVE';
+function getEffectivenessLabel(effectiveness?: number): string | null {
+  if (effectiveness === undefined || effectiveness === 1) return null;
+  if (effectiveness === 0) return 'No effect';
+  return effectiveness > 1 ? 'Super effective' : 'Not very effective';
 }
+
+const moveIcons = {
+  attack: 'flame',
+  protect: 'shield',
+  switchout: 'refresh',
+} as const;
 
 export default function BattlePlayPage() {
   const params = useParams();
@@ -43,7 +49,6 @@ export default function BattlePlayPage() {
   const changeActiveCard = useMutation(api.battle.changeActiveCard);
   const [selectedMove, setSelectedMove] = useState<string | null>(null);
   const [switchTarget, setSwitchTarget] = useState<number | null>(null);
-  const [movePopoverOpen, setMovePopoverOpen] = useState(false);
   const [inspected, setInspected] = useState<{
     side: 'you' | 'opponent';
     index: number;
@@ -62,11 +67,20 @@ export default function BattlePlayPage() {
   } | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [effectsEnabled, setEffectsEnabled] = useState(true);
-  const [logOpen, setLogOpen] = useState(false);
+  const [entering, setEntering] = useState({ you: false, opponent: false });
+  const [knockedOut, setKnockedOut] = useState<{
+    side: 'you' | 'opponent';
+    index: number;
+  } | null>(null);
   const inspectTriggerRef = useRef<HTMLButtonElement | null>(null);
   const lastSeenTurn = useRef<string | null>(null);
   const lastBattleId = useRef<string | null>(null);
   const previousStatus = useRef<string | null>(null);
+  const previousActive = useRef<{
+    battleId: string;
+    you?: number;
+    opponent?: number;
+  } | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -90,11 +104,49 @@ export default function BattlePlayPage() {
     selectedAccount?.address === battle?.player1Address
       ? battle?.gameState.player1Active
       : battle?.gameState.player2Active;
+  const rivalActive =
+    selectedAccount?.address === battle?.player1Address
+      ? battle?.gameState.player2Active
+      : battle?.gameState.player1Active;
   useEffect(() => {
     setSelectedMove(null);
     setSwitchTarget(null);
-    setMovePopoverOpen(false);
   }, [localActive, battle?.battleId]);
+  // Animate cards entering or leaving the active slots, but never on first load.
+  useEffect(() => {
+    if (!battle) return;
+    const previous = previousActive.current;
+    previousActive.current = {
+      battleId: battle.battleId,
+      you: localActive,
+      opponent: rivalActive,
+    };
+    if (!previous || previous.battleId !== battle.battleId || !effectsEnabled)
+      return;
+    const you = localActive !== undefined && localActive !== previous.you;
+    const opponent =
+      rivalActive !== undefined && rivalActive !== previous.opponent;
+    const fallen =
+      previous.you !== undefined && localActive === undefined
+        ? { side: 'you' as const, index: previous.you }
+        : previous.opponent !== undefined && rivalActive === undefined
+          ? { side: 'opponent' as const, index: previous.opponent }
+          : null;
+    if (!you && !opponent && !fallen) return;
+    setEntering({ you, opponent });
+    if (fallen) setKnockedOut(fallen);
+    const enterTimer = window.setTimeout(
+      () => setEntering({ you: false, opponent: false }),
+      560,
+    );
+    const knockoutTimer = window.setTimeout(() => setKnockedOut(null), 950);
+    return () => {
+      window.clearTimeout(enterTimer);
+      window.clearTimeout(knockoutTimer);
+      setEntering({ you: false, opponent: false });
+      setKnockedOut(null);
+    };
+  }, [localActive, rivalActive, battle?.battleId, effectsEnabled]);
   useEffect(() => {
     if (!battle) return;
     const wasSetup = previousStatus.current === 'initializing';
@@ -239,8 +291,6 @@ export default function BattlePlayPage() {
   const theirs = isPlayer1 ? battle.player2NFT : battle.player1NFT;
   const yourData = isPlayer1 ? battle.player1NFTData : battle.player2NFTData;
   const theirData = isPlayer1 ? battle.player2NFTData : battle.player1NFTData;
-  const yourMeta = getNFTMetadata(yourData?.itemMetadata);
-  const theirMeta = getNFTMetadata(theirData?.itemMetadata);
   const yourName = getPlayerDisplayName(
     selectedAccount.address,
     isPlayer1 ? battle.player1Name : battle.player2Name,
@@ -335,17 +385,18 @@ export default function BattlePlayPage() {
             (battle.gameState.pendingTurn
               ? 'A turn is being processed.'
               : yourTurn
-                ? selectedMove
-                  ? `Ready to use ${selectedMove}. Confirm to resolve the turn.`
-                  : 'Your turn. Choose a move from the hover box.'
+                ? 'Your turn. Tap a move to play it.'
                 : `Waiting for ${opponentName}.`);
   const won = battle.gameState.winner === selectedAccount.address;
   const displayTurn = yourTurn ? 'player' : 'opponent';
-  const selectedMoveIsValid = moves.some(
-    (move) =>
-      move.name === selectedMove &&
-      (move.kind !== 'switchout' || switchTarget !== null),
+  const hasReserve = yourLineup.some(
+    (index) => index !== yourActiveIndex && (yourCardHealth[index] ?? 0) > 0,
   );
+  const activeCardName =
+    yourActiveIndex === undefined
+      ? null
+      : getNFTMetadata(yourRosterData[yourActiveIndex]?.itemMetadata)?.name ||
+        `NFT #${yourRoster[yourActiveIndex].item}`;
   const inspectedRoster =
     inspected?.side === 'you' ? yourRoster : opponentRoster;
   const inspectedData =
@@ -359,6 +410,23 @@ export default function BattlePlayPage() {
     ? getNFTMetadata(inspectedData[inspected.index]?.itemMetadata)
     : null;
   const inspectedImage = getIpfsImageUrl(inspectedMeta);
+  const knockedOutImage =
+    knockedOut &&
+    (knockedOut.side === 'you' ? yourActiveIndex : opponentActiveIndex) ===
+      undefined
+      ? getIpfsImageUrl(
+          getNFTMetadata(
+            (knockedOut.side === 'you' ? yourRosterData : opponentRosterData)[
+              knockedOut.index
+            ]?.itemMetadata,
+          ),
+        )
+      : null;
+  const eventName = visualEvent
+    ? visualEvent.kind === 'protect' && !visualEvent.protectSuccess
+      ? 'protect-failed'
+      : visualEvent.kind
+    : undefined;
   function openInspection(
     trigger: HTMLButtonElement,
     side: 'you' | 'opponent',
@@ -389,9 +457,8 @@ export default function BattlePlayPage() {
     if (priorityBattle && !needsReplacement) {
       const switchMove = moves.find((move) => move.kind === 'switchout');
       if (!switchMove) return;
-      setSwitchTarget(inspected.index);
-      setSelectedMove(switchMove.name);
       closeInspection();
+      void playMove(switchMove.name, inspected.index);
       return;
     }
     setExecuting(true);
@@ -413,16 +480,10 @@ export default function BattlePlayPage() {
     }
   }
 
-  async function attack() {
-    if (
-      !battle ||
-      !selectedMove ||
-      !selectedMoveIsValid ||
-      !canAct ||
-      needsReplacement ||
-      !selectedAccount
-    )
-      return;
+  async function playMove(moveName: string, cardIndex?: number) {
+    if (!battle || !canAct || needsReplacement || !selectedAccount) return;
+    setSelectedMove(moveName);
+    setSwitchTarget(cardIndex ?? null);
     setExecuting(true);
     setMessage(priorityBattle ? 'Locking action...' : 'Resolving turn...');
     try {
@@ -431,8 +492,8 @@ export default function BattlePlayPage() {
           battleId,
           playerAddress: selectedAccount.address,
           expectedRound: battle.gameState.turnNumber + 1,
-          action: selectedMove,
-          ...(switchTarget === null ? {} : { cardIndex: switchTarget }),
+          action: moveName,
+          ...(cardIndex === undefined ? {} : { cardIndex }),
         });
         setMessage(
           result.resolved
@@ -443,14 +504,12 @@ export default function BattlePlayPage() {
         const result = await executeTurn({
           battleId,
           playerAddress: selectedAccount.address,
-          action: selectedMove,
+          action: moveName,
         });
         setMessage(
           `${result.wasCritical ? 'Critical hit! ' : ''}${result.damage} damage dealt.`,
         );
       }
-      setSelectedMove(null);
-      setSwitchTarget(null);
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'Unable to play that move';
@@ -458,15 +517,20 @@ export default function BattlePlayPage() {
       toast.error(detail);
     } finally {
       setExecuting(false);
+      setSelectedMove(null);
+      setSwitchTarget(null);
     }
   }
 
   return (
     <main className="battle-client live-match">
       <div
-        className="battle-stage"
+        className={`battle-stage${effectsEnabled ? '' : ' is-reduced-motion'}`}
         data-turn={displayTurn}
         data-impact={impact ?? undefined}
+        data-event={eventName}
+        data-event-target={visualEvent?.target}
+        data-critical={visualEvent?.critical ? 'true' : undefined}
         data-revealing={revealing ? 'true' : undefined}
         data-testid="battle-stage"
         aria-label={`${yourName} versus ${opponentName} live NFT battle`}
@@ -485,6 +549,7 @@ export default function BattlePlayPage() {
         >
           {opponentActiveIndex !== undefined && (
             <BattleNFTCard
+              key={`opponent-active-${opponentActiveIndex}`}
               className="opponent-board-nft"
               card={opponentRoster[opponentActiveIndex]}
               metadata={opponentRosterData[opponentActiveIndex]?.itemMetadata}
@@ -492,94 +557,52 @@ export default function BattlePlayPage() {
               label="opponent active"
               style={{ left: '50%', top: '31%' }}
               impact={impact === 'opponent'}
+              entering={entering.opponent}
               onInspect={(trigger) =>
                 openInspection(trigger, 'opponent', opponentActiveIndex)
               }
             />
           )}
           {yourActiveIndex !== undefined && (
-            <div
-              className={`active-nft-wrap ${movePopoverOpen ? 'moves-open' : ''}`}
-            >
+            <div className="active-nft-wrap">
               <BattleNFTCard
+                key={`local-active-${yourActiveIndex}`}
                 className="local-board-nft"
                 card={yourRoster[yourActiveIndex]}
                 metadata={yourRosterData[yourActiveIndex]?.itemMetadata}
                 health={yourHealth}
                 label="your active card"
                 impact={impact === 'you'}
+                entering={entering.you}
                 onInspect={(trigger) =>
                   openInspection(trigger, 'you', yourActiveIndex)
                 }
               />
-              <div
-                className="live-moves-popover"
-                aria-label="Active card moves"
-              >
-                <strong>
-                  Moves ·{' '}
-                  {getNFTMetadata(yourRosterData[yourActiveIndex]?.itemMetadata)
-                    ?.name || yourRoster[yourActiveIndex].item}
-                </strong>
-                {moves.map((move, index) => (
-                  <button
-                    key={`${move.name}-${index}`}
-                    type="button"
-                    disabled={
-                      !canAct ||
-                      needsReplacement ||
-                      (move.kind === 'switchout' &&
-                        !yourLineup.some(
-                          (index) =>
-                            index !== yourActiveIndex &&
-                            (yourCardHealth[index] ?? 0) > 0,
-                        ))
-                    }
-                    aria-pressed={selectedMove === move.name}
-                    onClick={(event) => {
-                      setSelectedMove(move.name);
-                      setSwitchTarget(null);
-                      setMovePopoverOpen(false);
-                      if (priorityBattle && move.kind === 'switchout') {
-                        const reserve = yourLineup.find(
-                          (index) =>
-                            index !== yourActiveIndex &&
-                            (yourCardHealth[index] ?? 0) > 0,
-                        );
-                        if (reserve !== undefined)
-                          openInspection(event.currentTarget, 'you', reserve);
-                      }
-                    }}
-                  >
-                    <b>{move.name}</b>
-                    <small>
-                      {move.kind === 'attack'
-                        ? `${getNFTTypeName(move.element ?? activeCard?.stats.nftType ?? -1)} attack`
-                        : move.kind === 'protect'
-                          ? 'Protect · priority'
-                          : move.kind === 'switchout'
-                            ? 'Switchout · choose a reserve'
-                            : 'Attack'}
-                    </small>
-                    <small>{move.description}</small>
-                  </button>
-                ))}
-              </div>
             </div>
           )}
           {yourLineup.map((cardIndex, index) => (
             <BattleNFTCard
               key={`lineup-${cardIndex}`}
-              className="local-lineup-nft"
+              className={`local-lineup-nft${
+                needsReplacement &&
+                yourTurn &&
+                !executing &&
+                (yourCardHealth[cardIndex] ?? 0) > 0
+                  ? ' is-choosable'
+                  : ''
+              }`}
               card={yourRoster[cardIndex]}
               metadata={yourRosterData[cardIndex]?.itemMetadata}
               health={yourCardHealth[cardIndex]}
               label={
                 cardIndex === yourActiveIndex
                   ? 'active lineup card'
-                  : 'reserve card'
+                  : switchTarget === cardIndex
+                    ? 'reserve card, selected for switchout'
+                    : 'reserve card'
               }
               active={cardIndex === yourActiveIndex}
+              selected={switchTarget === cardIndex}
               style={{
                 left: `${49 + (index - (yourLineup.length - 1) / 2) * 14}%`,
                 top: '80%',
@@ -606,37 +629,59 @@ export default function BattlePlayPage() {
                 }
               />
             ))}
+          {knockedOut && knockedOutImage && (
+            <div
+              className={`live-ko-ghost live-ko-ghost-${knockedOut.side}`}
+              aria-hidden="true"
+            >
+              <img src={knockedOutImage} alt="" />
+            </div>
+          )}
         </div>
 
         {visualEvent && (
           <div
-            className={`live-event-vfx live-event-${visualEvent.kind} live-event-${visualEvent.target}`}
+            className={[
+              'live-event-vfx',
+              `live-event-${visualEvent.kind}`,
+              `live-event-${visualEvent.target}`,
+              visualEvent.critical && 'is-critical',
+              visualEvent.knockedOut && 'is-ko',
+              visualEvent.blocked && 'is-blocked',
+              visualEvent.kind === 'protect' &&
+                !visualEvent.protectSuccess &&
+                'is-failed',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             aria-hidden="true"
           >
             <span className="live-event-beam" />
             <span className="live-event-ring" />
-            <strong>
-              {visualEvent.kind === 'protect'
-                ? visualEvent.protectSuccess
-                  ? 'PROTECTED'
-                  : 'PROTECT FAILED'
-                : visualEvent.kind === 'switch'
-                  ? 'SWITCH'
-                  : visualEvent.knockedOut
-                    ? 'KNOCKOUT'
-                    : visualEvent.blocked
-                      ? 'BLOCKED'
-                      : visualEvent.critical
-                        ? 'CRITICAL HIT'
-                        : 'HIT'}
-            </strong>
-            {visualEvent.kind === 'attack' && (
-              <b>
-                {visualEvent.blocked
-                  ? 'NO DAMAGE'
-                  : `${visualEvent.damage} DAMAGE`}
-              </b>
-            )}
+            <span className="live-event-label">
+              <strong>
+                {visualEvent.kind === 'protect'
+                  ? visualEvent.protectSuccess
+                    ? 'PROTECTED'
+                    : 'PROTECT FAILED'
+                  : visualEvent.kind === 'switch'
+                    ? 'SWITCH'
+                    : visualEvent.knockedOut
+                      ? 'KNOCKOUT'
+                      : visualEvent.blocked
+                        ? 'BLOCKED'
+                        : visualEvent.critical
+                          ? 'CRITICAL HIT'
+                          : 'HIT'}
+              </strong>
+              {visualEvent.kind === 'attack' && (
+                <b>
+                  {visualEvent.blocked
+                    ? 'NO DAMAGE'
+                    : `${visualEvent.damage} DAMAGE`}
+                </b>
+              )}
+            </span>
           </div>
         )}
 
@@ -652,6 +697,11 @@ export default function BattlePlayPage() {
             </strong>
             <small className="live-rail-max">/ {opponentMaxHealth} HP</small>
             <span className="live-rail-track">
+              <b
+                style={{
+                  width: `${opponentMaxHealth ? (opponentHealth / opponentMaxHealth) * 100 : 0}%`,
+                }}
+              />
               <i
                 style={{
                   width: `${opponentMaxHealth ? (opponentHealth / opponentMaxHealth) * 100 : 0}%`,
@@ -668,6 +718,11 @@ export default function BattlePlayPage() {
             <strong className="rail-score rail-score-blue">{yourHealth}</strong>
             <small className="live-rail-max">/ {yourMaxHealth} HP</small>
             <span className="live-rail-track">
+              <b
+                style={{
+                  width: `${yourMaxHealth ? (yourHealth / yourMaxHealth) * 100 : 0}%`,
+                }}
+              />
               <i
                 style={{
                   width: `${yourMaxHealth ? (yourHealth / yourMaxHealth) * 100 : 0}%`,
@@ -685,9 +740,11 @@ export default function BattlePlayPage() {
         >
           {inspectedCard && inspected && (
             <DialogPrimitive.Portal>
-              <DialogPrimitive.Overlay className="live-inspect-backdrop" />
+              <DialogPrimitive.Overlay
+                className={`live-inspect-backdrop${effectsEnabled ? '' : ' is-reduced-motion'}`}
+              />
               <DialogPrimitive.Content
-                className="live-inspect"
+                className={`live-inspect${effectsEnabled ? '' : ' is-reduced-motion'}`}
                 aria-describedby="live-inspect-subtitle"
                 onCloseAutoFocus={(event) => {
                   event.preventDefault();
@@ -710,6 +767,7 @@ export default function BattlePlayPage() {
                   </DialogPrimitive.Close>
                 </div>
                 <InspectionImage
+                  key={`${inspected.side}-${inspected.index}`}
                   src={inspectedImage}
                   name={inspectedMeta?.name || 'NFT artwork'}
                 />
@@ -776,7 +834,7 @@ export default function BattlePlayPage() {
                     {needsReplacement
                       ? 'Choose replacement'
                       : priorityBattle
-                        ? 'Select for Switchout'
+                        ? 'Switch in this card (uses turn)'
                         : 'Switch to this card (uses turn)'}
                   </button>
                 )}
@@ -789,8 +847,13 @@ export default function BattlePlayPage() {
                       <button
                         key={`${card.collection}:${card.item}`}
                         type="button"
-                        aria-label={`Inspect NFT ${index + 1}`}
+                        aria-label={`Inspect NFT ${index + 1}${(inspectedHealth[index] ?? card.stats.maxHealth) <= 0 ? ', knocked out' : ''}`}
                         aria-pressed={index === inspected.index}
+                        data-fainted={
+                          (inspectedHealth[index] ?? card.stats.maxHealth) <= 0
+                            ? 'true'
+                            : undefined
+                        }
                         onClick={() =>
                           setInspected({ side: inspected.side, index })
                         }
@@ -805,131 +868,134 @@ export default function BattlePlayPage() {
           )}
         </DialogPrimitive.Root>
 
-        <div className="player-console">
-          <div className="console-profile">
-            <span className="console-avatar">
-              {yourName.charAt(0).toUpperCase()}
-            </span>
-            <span>
-              <b>{yourName}</b>
-              <small>{yourMeta?.name || `NFT #${yours.item}`}</small>
-            </span>
-          </div>
-          <div className="console-divider" />
-          <div className="console-health">
-            <span className="health-pulse" />
-            <span>
-              <b>{finished ? 'FINAL RESULT' : 'MATCH STATUS'}</b>
-              <small>
-                {finished
-                  ? won
-                    ? 'VICTORY'
-                    : 'DEFEAT'
-                  : `${priorityBattle ? 'ROUND' : 'TURN'} ${battle.gameState.turnNumber}`}
-              </small>
-            </span>
-          </div>
-        </div>
-
         <section
-          className="action-dock live-action-dock"
-          aria-label="Battle actions"
+          className="live-moves-panel"
+          aria-label="Moves"
+          data-ready={canAct && !needsReplacement ? 'true' : undefined}
         >
-          <div className="action-message" role="status" aria-live="polite">
-            <span className="message-mark">✦</span>
-            <span>{statusMessage}</span>
+          <header className="live-panel-heading">
+            <span className="live-panel-kicker">
+              <i /> MOVES
+            </span>
+            <b>{activeCardName ?? 'No active card'}</b>
+          </header>
+          <p className="live-moves-status" role="status" aria-live="polite">
+            <span key={statusMessage}>{statusMessage}</span>
+          </p>
+          <div className="live-move-list">
+            {moves.map((move, index) => {
+              const kind = move.kind ?? 'attack';
+              const pending = executing && selectedMove === move.name;
+              return (
+                <button
+                  key={`${move.name}-${index}`}
+                  type="button"
+                  className="live-move"
+                  data-kind={kind}
+                  style={{ '--move-index': index } as CSSProperties}
+                  disabled={
+                    !canAct ||
+                    needsReplacement ||
+                    (kind === 'switchout' && !hasReserve)
+                  }
+                  aria-busy={pending}
+                  onClick={(event) => {
+                    if (kind === 'switchout') {
+                      const reserve = yourLineup.find(
+                        (cardIndex) =>
+                          cardIndex !== yourActiveIndex &&
+                          (yourCardHealth[cardIndex] ?? 0) > 0,
+                      );
+                      if (reserve !== undefined)
+                        openInspection(event.currentTarget, 'you', reserve);
+                      return;
+                    }
+                    void playMove(move.name);
+                  }}
+                >
+                  <span className="live-move-icon">
+                    <Icon
+                      name={
+                        moveIcons[kind as keyof typeof moveIcons] ?? 'spark'
+                      }
+                      size={16}
+                    />
+                  </span>
+                  <span className="live-move-copy">
+                    <b>{move.name}</b>
+                    <small className="live-move-kind">
+                      {pending
+                        ? priorityBattle
+                          ? 'Locking…'
+                          : 'Resolving…'
+                        : kind === 'protect'
+                          ? 'Protect · priority'
+                          : kind === 'switchout'
+                            ? 'Switchout · choose a reserve'
+                            : `${getNFTTypeName(move.element ?? activeCard?.stats.nftType ?? -1)} attack`}
+                    </small>
+                    <small className="live-move-desc">{move.description}</small>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <div className="live-quick-controls">
-            <Link
-              href="/battle"
-              className="live-arena-link"
-              aria-label="Return to arena"
-            >
-              ← Arena
-            </Link>
-            <button
-              className="live-effects-toggle"
-              type="button"
-              onClick={() => {
-                setEffectsEnabled((enabled) => !enabled);
-                setImpact(null);
-              }}
-              aria-label={
-                effectsEnabled
-                  ? 'Reduce battle effects'
-                  : 'Enable battle effects'
-              }
-              aria-pressed={!effectsEnabled}
-            >
-              <Icon name="shield" size={16} />
-            </button>
-          </div>
-          <div className="action-buttons">
-            <button
-              type="button"
-              className="action-button action-secondary live-moves-toggle"
-              onClick={() => setMovePopoverOpen((open) => !open)}
-              disabled={
-                !canAct || needsReplacement || yourActiveIndex === undefined
-              }
-              aria-expanded={movePopoverOpen}
-              aria-label="Choose an active card move"
-            >
-              <span>
-                <b>CHOOSE MOVE</b>
-                <small>
-                  {selectedMove
-                    ? `${selectedMove}${switchTarget !== null ? ` → NFT ${switchTarget + 1}` : ''}`
-                    : 'VIEW MOVES'}
-                </small>
-              </span>
-            </button>
-            <button
-              className="action-button action-secondary"
-              type="button"
-              onClick={() => setLogOpen((open) => !open)}
-              aria-expanded={logOpen}
-              aria-controls="live-battle-log"
-            >
-              <span className="button-icon">
-                <Icon name="chat" size={16} />
-              </span>
-              <span>
-                <b>BATTLE LOG</b>
-                <small>{battle.moves.length} EVENTS</small>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="action-button action-attack"
-              onClick={() => void attack()}
-              disabled={!canAct || !selectedMoveIsValid}
-            >
-              <span className="button-icon">
-                <Icon name="flame" size={16} />
-              </span>
-              <span>
-                <b>
-                  {executing
-                    ? 'RESOLVING…'
-                    : finished
-                      ? 'MATCH COMPLETE'
-                      : priorityBattle
-                        ? 'LOCK ACTION'
-                        : 'PLAY MOVE'}
-                </b>
-                <small>
-                  {executing
-                    ? 'WAIT FOR RESULT'
-                    : !yourTurn
-                      ? 'RIVAL’S TURN'
-                      : selectedMoveIsValid
-                        ? selectedMove?.toUpperCase()
-                        : 'SELECT A MOVE'}
-                </small>
-              </span>
-            </button>
-          </div>
+        </section>
+
+        <section className="live-log-panel" aria-label="Battle log">
+          <header className="live-panel-heading">
+            <span className="live-panel-kicker">
+              <i /> BATTLE LOG
+            </span>
+            <small>
+              {battle.moves.length} EVENT{battle.moves.length === 1 ? '' : 'S'}
+            </small>
+          </header>
+          {battle.moves.length === 0 ? (
+            <p className="live-log-empty">
+              No moves yet. The first strike will appear here.
+            </p>
+          ) : (
+            <ol className="live-log-list">
+              {[...battle.moves].reverse().map((move) => {
+                const mine = move.player === selectedAccount.address;
+                const effectiveness = getEffectivenessLabel(move.effectiveness);
+                const notes = [
+                  move.blocked && 'Blocked',
+                  effectiveness,
+                  move.wasCritical && 'Critical',
+                ].filter(Boolean);
+                return (
+                  <li
+                    key={move.turnId}
+                    className="live-log-row"
+                    data-side={mine ? 'you' : 'rival'}
+                    data-kind={move.kind ?? 'attack'}
+                    title={new Date(move.timestamp).toLocaleTimeString()}
+                  >
+                    <span className="live-log-copy">
+                      <small>
+                        {mine ? 'You' : opponentName} ·{' '}
+                        {priorityBattle ? 'R' : 'T'}
+                        {move.turnNumber}
+                      </small>
+                      <b>{move.action}</b>
+                      {notes.length > 0 && <em>{notes.join(' · ')}</em>}
+                    </span>
+                    <span className="live-log-result">
+                      {move.kind === 'switch'
+                        ? 'Switch'
+                        : move.kind === 'protect'
+                          ? move.protectSuccess
+                            ? 'Guard'
+                            : 'Failed'
+                          : `−${move.damage ?? 0}`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </section>
 
         <div className="stage-footer">
@@ -937,61 +1003,13 @@ export default function BattlePlayPage() {
           SYNCHRONIZED WITH THE ARENA
         </div>
 
-        {logOpen ? (
-          <section
-            className="live-log-popover"
-            id="live-battle-log"
-            aria-label="Battle log"
-          >
-            <div className="live-log-heading">
-              <span className="choice-kicker">
-                <i /> BATTLE LOG · {battle.moves.length} EVENTS
-              </span>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setLogOpen(false)}
-                aria-label="Close battle log"
-              >
-                ×
-              </button>
-            </div>
-            <div className="live-log-entries">
-              {battle.moves.length === 0 ? (
-                <p className="live-log-empty">
-                  No moves yet. The first strike will appear here.
-                </p>
-              ) : (
-                [...battle.moves].reverse().map((move) => (
-                  <article className="live-log-entry" key={move.turnId}>
-                    <small>
-                      {priorityBattle ? 'ROUND' : 'TURN'} {move.turnNumber} ·{' '}
-                      {move.player === selectedAccount.address
-                        ? 'YOU'
-                        : opponentName}
-                    </small>
-                    <b>{move.action}</b>
-                    <span>
-                      {move.kind === 'switch'
-                        ? 'CARD CHANGE'
-                        : move.kind === 'protect'
-                          ? move.protectSuccess
-                            ? 'PROTECTED'
-                            : 'PROTECT FAILED'
-                          : `${move.damage ?? 0} DAMAGE${move.blocked ? ' · BLOCKED' : ''}${getEffectivenessLabel(move.effectiveness)}${move.wasCritical ? ' · CRITICAL' : ''}`}
-                    </span>
-                    <time dateTime={new Date(move.timestamp).toISOString()}>
-                      {new Date(move.timestamp).toLocaleTimeString()}
-                    </time>
-                  </article>
-                ))
-              )}
-            </div>
-          </section>
-        ) : null}
-
         {finished ? (
-          <section className="live-result" role="status" aria-live="polite">
+          <section
+            className="live-result"
+            role="status"
+            aria-live="polite"
+            data-outcome={won ? 'victory' : 'defeat'}
+          >
             <span className="choice-kicker">
               <i /> MATCH COMPLETE · TURN {battle.gameState.turnNumber}
             </span>
