@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Coins, Package, Gift, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,16 +44,19 @@ import type { UserCollection } from '@/lib/solanaNFTManager';
 import { mintImageAsNFT, getUserCollections } from '@/lib/mintNFT';
 import { useNFTs } from '@/hooks/useNFTs';
 import type { Id } from '@/convex/_generated/dataModel';
+import type { FunctionReturnType } from 'convex/server';
 
 interface MysteryBoxesProps {
   userAddress: string;
+  userCredits: number;
+  userBoxes: FunctionReturnType<typeof api.marketplace.getUserMysteryBoxes>;
 }
 
-export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
-  const userCredits = useQuery(api.users.getUser, { address: userAddress });
-  const userBoxes = useQuery(api.marketplace.getUserMysteryBoxes, {
-    userAddress,
-  });
+export function MysteryBoxes({
+  userAddress,
+  userCredits,
+  userBoxes,
+}: MysteryBoxesProps) {
   const purchaseBoxMutation = useMutation(api.marketplace.purchaseMysteryBox);
   const openBoxMutation = useMutation(api.marketplace.openMysteryBox);
   const generateImageMutation = useMutation(api.images.generateImage);
@@ -164,7 +166,7 @@ export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
 
   const handlePurchase = async (tier: keyof typeof MYSTERY_BOX_TIERS) => {
     const boxInfo = MYSTERY_BOX_TIERS[tier];
-    if (!userCredits || (userCredits.credits || 0) < boxInfo.price) {
+    if (userCredits < boxInfo.price) {
       toast.error('Insufficient credits');
       return;
     }
@@ -259,27 +261,7 @@ export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
     }
   };
 
-  if (userCredits === undefined || userBoxes === undefined) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="w-full">
-              <CardHeader>
-                <Skeleton className="h-6 w-2/3" />
-                <Skeleton className="h-4 w-full" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const credits = userCredits?.credits || 0;
+  const credits = userCredits;
 
   return (
     <div className="space-y-6">

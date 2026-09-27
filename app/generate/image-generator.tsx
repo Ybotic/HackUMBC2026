@@ -187,13 +187,6 @@ export function ImageGenerator() {
   return (
     <div className="p-2">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">NFT Generator</h1>
-          <p className="text-lg text-muted-foreground mx-auto">
-            Create stunning artwork and mint it directly as NFTs on Solana
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
           <div className="lg:order-1">
             <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-muted-foreground/40 transition-colors duration-300 backdrop-blur-sm bg-card/80">

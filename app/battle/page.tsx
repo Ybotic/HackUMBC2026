@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Link as TransitionLink } from 'next-view-transitions';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -13,6 +14,7 @@ import {
   formatTimeLeft,
 } from '@/lib/battle-utils';
 import { PageStateCard } from '@/components/battle/PageStateCard';
+import { NFTHeadingWord } from '@/components/NFTHeadingWord';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +37,19 @@ import {
   Swords,
   Users,
 } from 'lucide-react';
+
+function BattleHeading() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <NFTHeadingWord /> Battle Arena
+      </h1>
+      <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
+        Bring 3–5 NFTs, find a rival, and choose your three-card team.
+      </p>
+    </div>
+  );
+}
 
 export default function BattlePage() {
   const router = useRouter();
@@ -99,13 +114,26 @@ export default function BattlePage() {
   }
 
   if (!isInitialized)
-    return <PageStateCard variant="loading" message="Preparing the arena..." />;
+    return (
+      <main className="container mx-auto max-w-[1500px] px-4 py-8">
+        <BattleHeading />
+        <PageStateCard
+          compact
+          variant="loading"
+          message="Preparing the arena..."
+        />
+      </main>
+    );
   if (!isReady || !selectedAccount)
     return (
-      <PageStateCard
-        variant="walletConnect"
-        message="Connect your wallet to enter the Mint arena."
-      />
+      <main className="container mx-auto max-w-[1500px] px-4 py-8">
+        <BattleHeading />
+        <PageStateCard
+          compact
+          variant="walletConnect"
+          message="Connect your wallet to enter the Mint arena."
+        />
+      </main>
     );
 
   const recent = activeBattles?.[0];
@@ -126,14 +154,7 @@ export default function BattlePage() {
                 Mint card duels
               </span>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Battle Arena
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-                Bring 3–5 NFTs, find a rival, and choose your three-card team.
-              </p>
-            </div>
+            <BattleHeading />
           </div>
           <Badge
             variant="outline"
@@ -249,12 +270,12 @@ export default function BattlePage() {
               {nfts !== undefined && nfts.length < 3 && (
                 <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
                   You need at least three synced NFTs to ready up.{' '}
-                  <Link
+                  <TransitionLink
                     className="font-medium text-primary underline-offset-4 hover:underline"
                     href="/generate"
                   >
                     Create a card
-                  </Link>{' '}
+                  </TransitionLink>{' '}
                   before readying up in a lobby.
                 </div>
               )}

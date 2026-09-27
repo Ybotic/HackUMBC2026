@@ -23,6 +23,7 @@ interface PageStateCardProps {
 
   // Styling
   maxWidth?: string;
+  compact?: boolean;
 }
 
 export function PageStateCard({
@@ -34,6 +35,7 @@ export function PageStateCard({
   buttonAction,
   redirectTo,
   maxWidth = 'max-w-md',
+  compact = false,
 }: PageStateCardProps) {
   const router = useRouter();
   const { connectWallet, isConnecting } = useSolana();
@@ -71,7 +73,9 @@ export function PageStateCard({
   const displayButtonText = buttonText ?? defaultProps.buttonText;
 
   return (
-    <div className="bg-background flex items-center justify-center h-[calc(100vh-4rem)]">
+    <div
+      className={`bg-background flex items-center justify-center ${compact ? 'min-h-[55vh]' : 'h-[calc(100vh-4rem)]'}`}
+    >
       <Card className={`w-full ${maxWidth}`}>
         <CardContent className="pt-6">
           <div className="text-center">

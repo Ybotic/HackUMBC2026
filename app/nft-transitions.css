@@ -1,0 +1,30 @@
+/* The NFT word travels between the four main page headings. */
+.nft-transition-word {
+  white-space: nowrap;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+}
+
+::view-transition-group(nft-heading) {
+  z-index: 1;
+  animation-duration: 720ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(nft-heading),
+::view-transition-new(nft-heading) {
+  animation-duration: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(nft-heading),
+  ::view-transition-new(nft-heading),
+  ::view-transition-group(nft-heading) {
+    animation-duration: 0.01ms;
+  }
+}

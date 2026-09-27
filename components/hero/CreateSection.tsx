@@ -6,7 +6,7 @@ import { useMousePosition } from '@/hooks/use-mouse-position';
 import PixelateSvgFilter from '@/components/fancy/pixelate-svg-filter';
 import { motion } from 'motion/react';
 import UnderlineToBackground from '@/components/fancy/underline-to-background';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 
 export default function CreateSection() {
   const containerRef = useRef<HTMLDivElement>(null);

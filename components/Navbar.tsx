@@ -1,10 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
+import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Swords, Home, Sparkles, ShoppingCart } from 'lucide-react';
 import { WalletConnection } from '@/components/WalletConnection';
+import { useSolana } from '@/lib/providers/SolanaProvider';
+import { useEffect, useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -15,6 +18,13 @@ const navigation = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
+  const { selectedAccount } = useSolana();
+  const [marketplacePending, setMarketplacePending] = useState(false);
+
+  useEffect(() => {
+    setMarketplacePending(false);
+  }, [pathname]);
 
   const shouldShowNavbar =
     pathname === '/dashboard' ||
@@ -36,20 +46,58 @@ export function Navbar() {
       {navigation.map((item) => (
         <Link
           key={item.name}
-          href={item.href}
+          href={
+            item.href === '/marketplace' && selectedAccount
+              ? `/marketplace?wallet=${encodeURIComponent(selectedAccount.address)}`
+              : item.href
+          }
+          prefetch={item.href === '/marketplace' ? true : undefined}
+          onClick={(event) => {
+            if (
+              item.href === '/marketplace' &&
+              pathname !== '/marketplace' &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.shiftKey &&
+              !event.altKey
+            ) {
+              setMarketplacePending(true);
+            }
+          }}
           className={cn(
-            'flex items-center transition-colors rounded-md',
+            'relative isolate flex items-center transition-colors rounded-md',
             isMobile
               ? 'justify-center p-2'
               : 'space-x-2 px-3 py-2 text-sm font-medium',
             isActive(item.href)
-              ? 'bg-primary text-primary-foreground'
+              ? 'text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted',
           )}
           title={isMobile ? item.name : undefined}
         >
-          <item.icon className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
-          {!isMobile && <span>{item.name}</span>}
+          {isActive(item.href) && (
+            <motion.span
+              layoutId={isMobile ? 'mobile-nav-active' : 'desktop-nav-active'}
+              className="absolute inset-0 -z-10 rounded-md bg-primary"
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { type: 'spring', stiffness: 420, damping: 36 }
+              }
+            />
+          )}
+          <item.icon
+            className={isMobile ? 'relative h-5 w-5' : 'relative h-4 w-4'}
+          />
+          {!isMobile && <span className="relative">{item.name}</span>}
+          {item.href === '/marketplace' && marketplacePending && (
+            <span
+              role="status"
+              className="absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary animate-pulse motion-reduce:animate-none"
+            >
+              <span className="sr-only">Loading marketplace</span>
+            </span>
+          )}
         </Link>
       ))}
     </div>

@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useMutation, usePreloadedQuery, type Preloaded } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Clock,
@@ -28,11 +27,16 @@ import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 
 interface AuctionsListProps {
   userAddress: string;
+  userCredits: number;
+  preloadedAuctions: Preloaded<typeof api.marketplace.getActiveAuctions>;
 }
 
-export function AuctionsList({ userAddress }: AuctionsListProps) {
-  const auctions = useQuery(api.marketplace.getActiveAuctions);
-  const userCredits = useQuery(api.users.getUser, { address: userAddress });
+export function AuctionsList({
+  userAddress,
+  userCredits,
+  preloadedAuctions,
+}: AuctionsListProps) {
+  const auctions = usePreloadedQuery(preloadedAuctions);
   const placeBidMutation = useMutation(api.marketplace.placeBid);
 
   const [bidAmounts, setBidAmounts] = useState<Record<string, string>>({});
@@ -49,7 +53,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
       return;
     }
 
-    if (!userCredits || (userCredits.credits || 0) < bidAmount) {
+    if (userCredits < bidAmount) {
       toast.error('Insufficient credits');
       return;
     }
@@ -88,7 +92,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
       return;
     }
 
-    if (!userCredits || (userCredits.credits || 0) < auction.buyoutPrice) {
+    if (userCredits < auction.buyoutPrice) {
       toast.error('Insufficient credits for buyout');
       return;
     }
@@ -121,64 +125,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
       : auction.minimumPrice;
   };
 
-  if (auctions === undefined) {
-    return (
-      <div className="space-y-4">
-        {[...Array(6)].map((_, i) => (
-          <Card
-            key={i}
-            className="overflow-hidden hover:shadow-md transition-shadow p-0"
-          >
-            <div className="flex">
-              <div className="relative w-80 bg-gradient-to-br from-muted/30 to-muted/60 flex-shrink-0 -m-px self-stretch">
-                <Skeleton className="w-full h-full rounded-l-lg" />
-              </div>
-              <div className="flex-1 flex">
-                <div className="flex-1 p-6 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <Skeleton className="h-6 w-48" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                    <Skeleton className="h-6 w-20" />
-                  </div>
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-32" />
-                    <div className="grid grid-cols-3 gap-3">
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-6 w-24" />
-                  </div>
-                </div>
-                <div className="w-56 p-6 border-l bg-muted/30 flex flex-col justify-center">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (!auctions || auctions.length === 0) {
+  if (auctions.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="bg-muted/30 rounded-xl p-12 max-w-md mx-auto">
@@ -414,9 +361,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
                           variant="outline"
                           size="sm"
                           className="w-full h-10"
-                          disabled={
-                            (userCredits?.credits || 0) < auction.buyoutPrice
-                          }
+                          disabled={userCredits < auction.buyoutPrice}
                           onClick={() => handleBuyout(auction._id, auction)}
                         >
                           <Zap className="h-4 w-4 mr-2" />
@@ -424,7 +369,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
                         </Button>
                       )}
                       <p className="text-sm text-muted-foreground text-center">
-                        Credits: {userCredits?.credits || 0}
+                        Credits: {userCredits}
                       </p>
                     </div>
                   ) : isOwnAuction && !isExpired ? (

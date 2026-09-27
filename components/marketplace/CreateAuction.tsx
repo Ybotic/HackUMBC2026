@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useMutation, usePreloadedQuery, type Preloaded } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import {
   Dialog,
@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
@@ -49,11 +48,16 @@ import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 
 interface CreateAuctionProps {
   userAddress: string;
+  preloadedNfts: Preloaded<typeof api.nft.getUserNFTs>;
   onClose: () => void;
 }
 
-export function CreateAuction({ userAddress, onClose }: CreateAuctionProps) {
-  const userNfts = useQuery(api.nft.getUserNFTs, { address: userAddress });
+export function CreateAuction({
+  userAddress,
+  preloadedNfts,
+  onClose,
+}: CreateAuctionProps) {
+  const userNfts = usePreloadedQuery(preloadedNfts);
   const createAuctionMutation = useMutation(api.marketplace.createAuction);
 
   const [selectedNft, setSelectedNft] = useState<any>(null);
@@ -402,29 +406,7 @@ export function CreateAuction({ userAddress, onClose }: CreateAuctionProps) {
                   </p>
                 </div>
 
-                {userNfts === undefined ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                    {[...Array(6)].map((_, i) => (
-                      <Card key={i} className="p-6 h-64">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <Skeleton className="h-6 w-24" />
-                            <Skeleton className="h-4 w-4 rounded-full" />
-                          </div>
-                          <Skeleton className="h-4 w-32" />
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-3 gap-2">
-                              <Skeleton className="h-8 w-full" />
-                              <Skeleton className="h-8 w-full" />
-                              <Skeleton className="h-8 w-full" />
-                            </div>
-                            <Skeleton className="h-8 w-full" />
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : !userNfts || userNfts.length === 0 ? (
+                {!userNfts || userNfts.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="bg-muted/30 rounded-xl p-12 max-w-md mx-auto">
                       <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />

@@ -22,6 +22,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useNFTs } from '@/hooks/useNFTs';
 import { PageStateCard } from '@/components/battle/PageStateCard';
+import { NFTHeadingWord } from '@/components/NFTHeadingWord';
 import { NFTStatsDisplay } from '@/components/battle/NFTStatsDisplay';
 import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 import { getNFTTypeName, getNFTTypeColor } from '@/lib/battle-utils';
@@ -79,6 +80,14 @@ function SyncStatus({
   );
 }
 
+function DashboardHeading() {
+  return (
+    <h1 className="text-4xl font-bold text-foreground">
+      My <NFTHeadingWord /> Collection
+    </h1>
+  );
+}
+
 export default function Dashboard() {
   const {
     isReady,
@@ -108,19 +117,27 @@ export default function Dashboard() {
 
   if (!isSolanaInitialized) {
     return (
-      <PageStateCard
-        variant="loading"
-        message="Initializing wallet connection..."
-      />
+      <main className="container mx-auto px-4 py-8">
+        <DashboardHeading />
+        <PageStateCard
+          compact
+          variant="loading"
+          message="Initializing wallet connection..."
+        />
+      </main>
     );
   }
 
   if (!isReady) {
     return (
-      <PageStateCard
-        variant="walletConnect"
-        message="Please connect your wallet to view your NFTs"
-      />
+      <main className="container mx-auto px-4 py-8">
+        <DashboardHeading />
+        <PageStateCard
+          compact
+          variant="walletConnect"
+          message="Please connect your wallet to view your NFTs"
+        />
+      </main>
     );
   }
 
@@ -138,9 +155,7 @@ export default function Dashboard() {
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold text-foreground">
-                  My Collection
-                </h1>
+                <DashboardHeading />
                 <p className="text-lg text-muted-foreground mt-2">
                   {isLoading
                     ? 'Loading your NFTs...'

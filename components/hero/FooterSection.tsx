@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Link as TransitionLink } from 'next-view-transitions';
 import { useRef } from 'react';
 import ParticleRose from '@/components/hero/particle-rose';
 import newGengar from '@/newimages/newgengar.jpg';
@@ -32,30 +33,30 @@ export default function FooterSection() {
           </div>
 
           <div className="grid grid-cols-2 md:flex md:flex-wrap justify-center gap-4 sm:gap-6 md:gap-12 lg:gap-16 text-white mb-6 sm:mb-8 md:mb-12 w-full max-w-lg md:max-w-none">
-            <Link
+            <TransitionLink
               href="/"
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Home
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               href="/dashboard"
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Dashboard
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               href="/generate"
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Generate
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               href="/battle"
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Battle
-            </Link>
+            </TransitionLink>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 text-white/60">

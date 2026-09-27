@@ -2,12 +2,14 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
+import './nft-transitions.css';
 import { SolanaProvider } from '@/lib/providers/SolanaProvider';
 import { SolanaNFTProvider } from '@/lib/providers/SolanaNFTProvider';
 import { ConvexClientProvider } from '@/lib/providers/ConvexClientProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { Navbar } from '@/components/Navbar';
 import { Analytics } from '@vercel/analytics/react';
+import { ViewTransitions } from 'next-view-transitions';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -46,21 +48,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${garamond.variable} ${megazoid.variable} antialiased`}
-      >
-        <ConvexClientProvider>
-          <SolanaProvider>
-            <SolanaNFTProvider>
-              <Navbar />
-              <Toaster richColors position="top-center" />
-              {children}
-              <Analytics basePath="/monitor" />
-            </SolanaNFTProvider>
-          </SolanaProvider>
-        </ConvexClientProvider>
-      </body>
-    </html>
+    <ViewTransitions>
+      <html lang="en" className="dark">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} ${garamond.variable} ${megazoid.variable} antialiased`}
+        >
+          <ConvexClientProvider>
+            <SolanaProvider>
+              <SolanaNFTProvider>
+                <Navbar />
+                <Toaster richColors position="top-center" />
+                {children}
+                <Analytics basePath="/monitor" />
+              </SolanaNFTProvider>
+            </SolanaProvider>
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ViewTransitions>
   );
 }
