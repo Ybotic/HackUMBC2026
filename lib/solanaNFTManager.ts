@@ -119,6 +119,7 @@ export class SolanaNFTManager {
     { expiresAt: number; value: unknown }
   >();
   private readonly pendingReads = new Map<string, Promise<unknown>>();
+  private readonly readGenerations = new Map<string, number>();
   private readonly collectionReadCache = new Map<
     string,
     { expiresAt: number; value: CoreCollectionAccount }
@@ -131,7 +132,13 @@ export class SolanaNFTManager {
     private readonly walletSigner: WalletSigner | null,
   ) {}
 
-  private cachedRead<T>(key: string, load: () => Promise<T>): Promise<T> {
+  private cachedRead<T>(
+    key: string,
+    load: () => Promise<T>,
+    forceRefresh = false,
+  ): Promise<T> {
+    if (forceRefresh) this.readCache.delete(key);
+
     const cached = this.readCache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
       return Promise.resolve(cached.value as T);
@@ -141,16 +148,21 @@ export class SolanaNFTManager {
     const pending = this.pendingReads.get(key);
     if (pending) return pending as Promise<T>;
 
+    const generation = this.readGenerations.get(key) ?? 0;
     const request = load()
       .then((value) => {
-        this.readCache.set(key, {
-          expiresAt: Date.now() + READ_CACHE_TTL_MS,
-          value,
-        });
+        if ((this.readGenerations.get(key) ?? 0) === generation) {
+          this.readCache.set(key, {
+            expiresAt: Date.now() + READ_CACHE_TTL_MS,
+            value,
+          });
+        }
         return value;
       })
       .finally(() => {
-        this.pendingReads.delete(key);
+        if ((this.readGenerations.get(key) ?? 0) === generation) {
+          this.pendingReads.delete(key);
+        }
       });
     this.pendingReads.set(key, request);
     return request;
@@ -187,9 +199,11 @@ export class SolanaNFTManager {
 
   private invalidateUserReads(userAddress?: string): void {
     if (!userAddress) return;
-    this.readCache.delete(`nfts:${userAddress}`);
-    this.readCache.delete(`collections:${userAddress}`);
-    this.collectionReadCache.clear();
+    for (const key of [`nfts:${userAddress}`, `collections:${userAddress}`]) {
+      this.readGenerations.set(key, (this.readGenerations.get(key) ?? 0) + 1);
+      this.readCache.delete(key);
+      this.pendingReads.delete(key);
+    }
   }
 
   private createUmiSigner(umi: ReturnType<typeof createUmi>): Signer {
@@ -279,56 +293,58 @@ export class SolanaNFTManager {
     return umi;
   }
 
-  async getUserNFTs(userAddress: string): Promise<UserNFT[]> {
-    return this.cachedRead(`nfts:${userAddress}`, async () => {
-      const umi = this.getUmi();
-      const assets = await this.runRpcRead(() =>
-        fetchAssetsByOwner(umi, publicKey(userAddress), {
-          skipDerivePlugins: false,
-        }),
-      );
-      const collectionReads = new Map<
-        string,
-        Promise<Awaited<ReturnType<typeof fetchCollection>> | null>
-      >();
+  async getUserNFTs(
+    userAddress: string,
+    options: { forceRefresh?: boolean } = {},
+  ): Promise<UserNFT[]> {
+    return this.cachedRead(
+      `nfts:${userAddress}`,
+      async () => {
+        const umi = this.getUmi();
+        const assets = await this.runRpcRead(() =>
+          fetchAssetsByOwner(umi, publicKey(userAddress), {
+            // Collection plugin derivation performs an extra RPC fetch per
+            // collection. Keep owner sync independent of that unreliable read;
+            // collection metadata is loaded by getUserCollections below.
+            skipDerivePlugins: true,
+          }),
+        );
 
-      return Promise.all(
-        assets.map(async (asset) => {
-          const collectionId =
-            asset.updateAuthority.type === 'Collection' &&
-            asset.updateAuthority.address
-              ? asset.updateAuthority.address.toString()
-              : 'uncollected';
+        return Promise.all(
+          assets.map(async (asset) => {
+            const collectionId =
+              asset.updateAuthority.type === 'Collection' &&
+              asset.updateAuthority.address
+                ? asset.updateAuthority.address.toString()
+                : 'uncollected';
 
-          let collection: Awaited<ReturnType<typeof fetchCollection>> | null =
-            null;
-          if (collectionId !== 'uncollected') {
-            let collectionRead = collectionReads.get(collectionId);
-            if (!collectionRead) {
-              collectionRead = this.runRpcRead(() =>
-                fetchCollection(umi, publicKey(collectionId)),
-              ).catch((error: unknown) => {
-                if (isRateLimitError(error)) throw error;
-                return null;
-              });
-              collectionReads.set(collectionId, collectionRead);
+            let collection: Awaited<ReturnType<typeof fetchCollection>> | null =
+              null;
+            if (collectionId !== 'uncollected') {
+              const cachedCollection =
+                this.collectionReadCache.get(collectionId);
+              if (cachedCollection && cachedCollection.expiresAt > Date.now()) {
+                collection = cachedCollection.value;
+              } else if (cachedCollection) {
+                this.collectionReadCache.delete(collectionId);
+              }
             }
-            collection = await collectionRead;
-          }
 
-          return {
-            collection: collectionId,
-            item: asset.publicKey.toString(),
-            owner: asset.owner.toString(),
-            itemDetails: asset,
-            itemMetadata: await fetchJson(asset.uri),
-            collectionMetadata: collection
-              ? await fetchJson(collection.uri)
-              : null,
-          };
-        }),
-      );
-    });
+            return {
+              collection: collectionId,
+              item: asset.publicKey.toString(),
+              owner: asset.owner.toString(),
+              itemDetails: asset,
+              itemMetadata: await fetchJson(asset.uri),
+              collectionMetadata: collection
+                ? await fetchJson(collection.uri)
+                : null,
+            };
+          }),
+        );
+      },
+      options.forceRefresh,
+    );
   }
 
   async getUserCollections(userAddress: string): Promise<UserCollection[]> {

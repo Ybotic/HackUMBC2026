@@ -98,7 +98,7 @@ export default function Dashboard() {
     syncFromSolana,
     burnNFT,
     initializeUser,
-  } = useNFTs();
+  } = useNFTs({ autoSyncIfStale: true });
 
   useEffect(() => {
     if (isReady && selectedAccount?.address) {

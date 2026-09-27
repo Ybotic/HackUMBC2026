@@ -122,7 +122,14 @@ export function ImageGenerator() {
 
       if (syncFromSolana) {
         try {
-          await syncFromSolana();
+          const syncResult = await syncFromSolana({
+            expectedItemId: result.itemId,
+          });
+          if (!syncResult.success) {
+            toast.info(
+              'Mint confirmed. Dashboard sync is delayed; use Sync NFTs to retry in a few seconds.',
+            );
+          }
         } catch (error) {
           console.error('Error syncing after mint:', error);
         }

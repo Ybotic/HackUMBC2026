@@ -241,7 +241,14 @@ export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
       });
 
       if (result && syncFromSolana) {
-        await syncFromSolana().catch(console.error);
+        const syncResult = await syncFromSolana({
+          expectedItemId: result.itemId,
+        });
+        if (!syncResult.success) {
+          toast.info(
+            'Mint confirmed. Dashboard sync is delayed; use Sync NFTs to retry in a few seconds.',
+          );
+        }
       }
       toast.success('NFT minted successfully!');
     } catch (error: any) {

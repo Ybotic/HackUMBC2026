@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +39,7 @@ import {
 } from '@/components/ui/tooltip';
 import { mintImageAsNFT, getUserCollections } from '@/lib/mintNFT';
 import type { UserCollection } from '@/lib/solanaNFTManager';
+import { useNFTs } from '@/hooks/useNFTs';
 
 type ImageGen = {
   _id: string;
@@ -388,6 +390,7 @@ function MintDialog({
   loading: boolean;
 }) {
   const { selectedAccount } = useSolana();
+  const { syncFromSolana } = useNFTs();
   const [selectedCollection, setSelectedCollection] = useState<string>('');
   const [newCollectionName, setNewCollectionName] = useState<string>('');
   const [nftName, setNftName] = useState<string>('');
@@ -411,7 +414,17 @@ function MintDialog({
       setMinting(false);
     }
 
-    if (result) setOpen(false);
+    if (result) {
+      setOpen(false);
+      const syncResult = await syncFromSolana({
+        expectedItemId: result.itemId,
+      });
+      if (!syncResult.success) {
+        toast.info(
+          'Mint confirmed. Dashboard sync is delayed; use Sync NFTs to retry in a few seconds.',
+        );
+      }
+    }
   };
 
   return (
