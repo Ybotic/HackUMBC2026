@@ -2524,3 +2524,20 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* The supplied playmat is the canvas; live cards and controls sit above it. */
+.battle-client.live-match .battle-stage {
+  background-color: #171a22;
+  background-image: url('/game-bg.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.battle-client.live-match .battle-stage::before,
+.battle-client.live-match .battle-stage::after,
+.battle-client.live-match .arena-glow,
+.battle-client.live-match .board-frame,
+.battle-client.live-match .board-shell {
+  display: none;
+}
