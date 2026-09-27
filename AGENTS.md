@@ -12,5 +12,3 @@ answers reflect current Solana documentation.
   before returning the code. Apply its suggested fixes, then call it again;
   repeat until `require_another_tool_call_after_fixing` is `false`.
   
-  
-  
