@@ -227,13 +227,9 @@ export function getTypeEffectiveness(
   return 1;
 }
 
-export function getFallbackMoves(
-  nftType: number,
-  cardIdentity = '',
-): TypedMove[] {
+export function getFallbackMoves(nftType: number): TypedMove[] {
   if (!isElementalType(nftType)) throw new Error('Unknown NFT type');
-  // The assigned NFT type determines combat mechanics; text only influences
-  // which of the two utility moves the card receives.
+  // The assigned NFT type determines combat mechanics.
   const names: Record<BattleTypeName, string[]> = {
     Fire: ['Flame Burst', 'Ember Strike', 'Inferno Rage'],
     Water: ['Aqua Strike', 'Tidal Wave', 'Hydro Cannon'],
@@ -283,26 +279,29 @@ export function getFallbackMoves(
     kind: 'attack',
     element: nftType,
   }));
-  const switchout =
-    [...cardIdentity].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 2 ===
-    1;
-  return [
-    ...attacks,
-    switchout
-      ? {
-          name: 'Switchout',
-          description: 'Switch to a living reserve from your battle lineup.',
-          iconName: 'Wind',
-          kind: 'switchout',
-        }
-      : {
-          name: 'Protect',
-          description:
-            'Block attacks this round. Consecutive uses have half the previous success chance.',
-          iconName: 'Shield',
-          kind: 'protect',
-        },
-  ];
+  return [...attacks, PROTECT_MOVE];
+}
+
+export const SWITCH_ACTION = 'Switch';
+
+export const PROTECT_MOVE: TypedMove = {
+  name: 'Protect',
+  description:
+    'Always moves first and blocks all damage this round. Success chance halves with each consecutive use.',
+  iconName: 'Shield',
+  kind: 'protect',
+};
+
+// Switching now lives on the lineup buttons, so every card's utility slot is
+// Protect. Older saved moves and battle snapshots may still hold Switchout.
+export function withProtectMove<T extends { kind?: string }>(
+  moves: readonly T[],
+): Array<T | TypedMove> {
+  return moves.map((move) => (move.kind === 'switchout' ? PROTECT_MOVE : move));
+}
+
+export function protectChance(streak = 0): number {
+  return 100 / 2 ** streak;
 }
 
 export function hasTypedMoves(

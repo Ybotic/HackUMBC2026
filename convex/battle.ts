@@ -1,10 +1,23 @@
 import { internalMutation, mutation, query } from './_generated/server';
 import { v } from 'convex/values';
-import { getTypeEffectiveness, isElementalType } from '../lib/battle-utils';
+import {
+  SWITCH_ACTION,
+  getTypeEffectiveness,
+  isElementalType,
+  protectChance,
+  withProtectMove,
+} from '../lib/battle-utils';
 import { internal } from './_generated/api';
 
 function eligibleReplacement(lineup: number[], health: number[]) {
   return lineup.filter((index) => health[index] > 0);
+}
+
+function findMove<T extends { name: string; kind?: string }>(
+  moves: readonly T[] | undefined,
+  name: string,
+) {
+  return withProtectMove(moves ?? []).find((move) => move.name === name);
 }
 
 export const confirmLineup = mutation({
@@ -138,7 +151,7 @@ export const changeActiveCard = mutation({
     const replacement = roster[cardIndex];
     const forced = activeIndex === undefined;
     if (battle.rulesVersion === 2 && !forced)
-      throw new Error('Use the Switchout move to change cards');
+      throw new Error('Use the Switch action to change cards');
     const turnNumber = forced ? state.turnNumber : state.turnNumber + 1;
     const turnId = `${battle.battleId}-${turnNumber}${forced ? '-replacement' : ''}`;
     await ctx.db.patch(battle._id, {
@@ -270,16 +283,7 @@ export const submitRoundAction = mutation({
       !((health[side]?.[actorIndex] ?? 0) > 0)
     )
       throw new Error('Active card is not available');
-    const move = actor.moves?.find((entry) => entry.name === args.action);
-    if (
-      !move ||
-      !move.kind ||
-      (move.kind === 'attack' &&
-        (!isElementalType(move.element ?? -1) ||
-          move.element !== actor.stats.nftType))
-    )
-      throw new Error('Move is not available to this card');
-    if (move.kind === 'switchout') {
+    if (args.action === SWITCH_ACTION) {
       if (
         args.cardIndex === undefined ||
         !Number.isInteger(args.cardIndex) ||
@@ -288,8 +292,18 @@ export const submitRoundAction = mutation({
         !((health[side]?.[args.cardIndex] ?? 0) > 0)
       )
         throw new Error('Choose a surviving reserve card');
-    } else if (args.cardIndex !== undefined) {
-      throw new Error('Only Switchout selects a reserve');
+    } else {
+      const move = findMove(actor.moves, args.action);
+      if (
+        !move ||
+        !move.kind ||
+        (move.kind === 'attack' &&
+          (!isElementalType(move.element ?? -1) ||
+            move.element !== actor.stats.nftType))
+      )
+        throw new Error('Move is not available to this card');
+      if (args.cardIndex !== undefined)
+        throw new Error('Only Switch selects a reserve');
     }
     const choice = {
       action: args.action,
@@ -317,8 +331,11 @@ export const submitRoundAction = mutation({
 
     const selected = [updated.player1, updated.player2];
     const selectedMoves = selected.map((entry, index) => {
-      const selectedMove = rosters[index][startingActive[index]].moves?.find(
-        (item) => item.name === entry.action,
+      if (entry.action === SWITCH_ACTION)
+        return { kind: 'switch' as const, element: undefined };
+      const selectedMove = findMove(
+        rosters[index][startingActive[index]].moves,
+        entry.action,
       );
       if (!selectedMove?.kind)
         throw new Error('Move is not available to this card');
@@ -332,7 +349,7 @@ export const submitRoundAction = mutation({
     const currentNFT = [battle.player1NFT, battle.player2NFT];
     const ordered = [0, 1].sort((a, b) => {
       const priority = (kind: string) =>
-        kind === 'protect' ? 2 : kind === 'switchout' ? 1 : 0;
+        kind === 'protect' ? 2 : kind === 'switch' ? 1 : 0;
       const difference =
         priority(selectedMoves[b].kind ?? '') -
         priority(selectedMoves[a].kind ?? '');
@@ -366,7 +383,7 @@ export const submitRoundAction = mutation({
       };
       if (selectedMove.kind === 'protect') {
         const count = streaks[actingSide][oldIndex] ?? 0;
-        const chance = 100 / 2 ** count;
+        const chance = protectChance(count);
         const success =
           seededPercent(
             `${battle.battleId}:${args.expectedRound}:${actingSide}:protect`,
@@ -374,9 +391,9 @@ export const submitRoundAction = mutation({
         streaks[actingSide][oldIndex] = count + 1;
         protectedSide[actingSide] = success;
         events.push({ ...event, kind: 'protect', protectSuccess: success });
-      } else if (selectedMove.kind === 'switchout') {
+      } else if (selectedMove.kind === 'switch') {
         if (chosen.cardIndex === undefined)
-          throw new Error('Switchout needs a reserve');
+          throw new Error('Switch needs a reserve');
         streaks[actingSide][oldIndex] = 0;
         active[actingSide] = chosen.cardIndex;
         currentNFT[actingSide] = rosters[actingSide][chosen.cardIndex];

@@ -377,10 +377,7 @@ export const generateAIMove = internalAction({
           nftMetadata: args.nftMetadata,
           nftType: args.nftType,
         });
-        const utility = getFallbackMoves(
-          args.nftType,
-          `${args.collectionId}:${args.itemId}`,
-        )[3];
+        const utility = getFallbackMoves(args.nftType)[3];
         const moves = [
           ...attacks.map((move) => ({
             ...move,
@@ -407,10 +404,7 @@ export const generateAIMove = internalAction({
 
         if (attempt === maxRetries) {
           // use fallback moves after all retries failed
-          const fallbackMoves = getFallbackMoves(
-            args.nftType,
-            `${args.nftMetadata?.name || ''} ${args.nftMetadata?.description || ''}`,
-          );
+          const fallbackMoves = getFallbackMoves(args.nftType);
           await ctx.runMutation(internal.nft.saveGeneratedMoves, {
             collectionId: args.collectionId,
             itemId: args.itemId,

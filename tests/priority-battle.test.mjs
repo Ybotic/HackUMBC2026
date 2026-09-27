@@ -23,7 +23,7 @@ function card(owner, index, type, speed, health = 120) {
       nftType: type,
       generatedAt: 1,
     },
-    moves: getFallbackMoves(type, `${owner}:${index}`),
+    moves: getFallbackMoves(type),
   };
 }
 
@@ -100,14 +100,15 @@ function setup({
 }
 
 describe('typed moves and priority rounds', () => {
-  test('fallback contains three attacks of the card type and one utility move', () => {
+  test('fallback contains three attacks of the card type and Protect', () => {
     for (const type of [0, 1, 2]) {
-      const moves = getFallbackMoves(type, `card-${type}`);
+      const moves = getFallbackMoves(type);
       expect(hasTypedMoves(moves, type)).toBe(true);
       expect(moves.slice(0, 3).every((move) => move.element === type)).toBe(
         true,
       );
       expect(moves[3].element).toBeUndefined();
+      expect(moves[3].kind).toBe('protect');
     }
     expect(() => getFallbackMoves(4)).toThrow('Unknown NFT type');
   });
@@ -183,14 +184,14 @@ describe('typed moves and priority rounds', () => {
   test('rejects forged moves, invalid targets, and old switching shortcut', async () => {
     const { ctx, submit, attack, battle } = setup();
     await expect(submit('A', 'Fake Move')).rejects.toThrow('not available');
-    await expect(submit('A', attack('A'), 2)).rejects.toThrow('Only Switchout');
+    await expect(submit('A', attack('A'), 2)).rejects.toThrow('Only Switch');
     await expect(
       changeActiveCard._handler(ctx, {
         battleId: 'TEST',
         playerAddress: 'A',
         cardIndex: 1,
       }),
-    ).rejects.toThrow('Use the Switchout');
+    ).rejects.toThrow('Use the Switch action');
     battle.player1Roster[0].moves[0].element = 2;
     await expect(
       submit('A', battle.player1Roster[0].moves[0].name),
@@ -250,21 +251,28 @@ describe('typed moves and priority rounds', () => {
     await expect(submit('A', attack('A'))).rejects.toThrow('not active');
   });
 
-  test('Switchout precedes attacks; KO cancels slower attack and requires forced replacement', async () => {
-    const { battle, ctx, submit, attack, b } = setup({ healthB: 1, speedB: 1 });
-    b[0].moves[3] = {
+  test('legacy Switchout moves act as Protect', async () => {
+    const { battle, submit, attack, a } = setup({ speedA: 1, speedB: 99 });
+    a[0].moves[3] = {
       name: 'Switchout',
       description: 'Switch.',
       iconName: 'Wind',
       kind: 'switchout',
     };
-    await expect(submit('B', 'Switchout', 0)).rejects.toThrow(
-      'surviving reserve',
-    );
-    await expect(submit('B', 'Switchout', 3)).rejects.toThrow(
-      'surviving reserve',
-    );
-    await submit('B', 'Switchout', 1);
+    await expect(submit('A', 'Switchout')).rejects.toThrow('not available');
+    await submit('B', attack('B'));
+    await submit('A', 'Protect');
+    expect(battle.moves[0].kind).toBe('protect');
+    expect(battle.moves[1].blocked).toBe(true);
+    expect(battle.gameState.player1Health).toBe(120);
+  });
+
+  test('Switch precedes attacks; KO cancels slower attack and requires forced replacement', async () => {
+    const { battle, ctx, submit, attack } = setup({ healthB: 1, speedB: 1 });
+    await expect(submit('B', 'Switch')).rejects.toThrow('surviving reserve');
+    await expect(submit('B', 'Switch', 0)).rejects.toThrow('surviving reserve');
+    await expect(submit('B', 'Switch', 3)).rejects.toThrow('surviving reserve');
+    await submit('B', 'Switch', 1);
     await submit('A', attack('A'));
     expect(battle.moves[0].kind).toBe('switch');
     expect(battle.moves[1].targetIndex).toBe(1);
