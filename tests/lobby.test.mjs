@@ -20,7 +20,7 @@ function setup() {
   const nft = (item) => ({
     owner: 'A',
     userAddress: 'user-A',
-    stats: { attack: 1, maxHealth: 20 },
+    stats: { attack: 1, maxHealth: 20, nftType: 0 },
     customMoves: [],
   });
   const ctx = {

@@ -17,6 +17,11 @@ export const nftMoveSchema = v.object({
   name: v.string(), // exactly 2 words
   description: v.string(), // 15-20 words max, simple language
   iconName: v.string(), // lucide react icon name
+  // Optional so existing saved NFTs and battle snapshots remain readable.
+  kind: v.optional(
+    v.union(v.literal('attack'), v.literal('protect'), v.literal('switchout')),
+  ),
+  element: v.optional(v.union(v.literal(0), v.literal(1), v.literal(2))),
 });
 
 export const battleNFTReferenceSchema = v.object({
@@ -127,6 +132,7 @@ export default defineSchema({
 
   battles: defineTable({
     battleId: v.string(),
+    rulesVersion: v.optional(v.number()), // 2 = typed moves and priority rounds
 
     // Players
     player1Address: v.string(),
@@ -155,6 +161,19 @@ export default defineSchema({
       player1CardHealth: v.optional(v.array(v.number())),
       player2CardHealth: v.optional(v.array(v.number())),
       turnNumber: v.number(),
+      roundDeadline: v.optional(v.number()),
+      roundChoices: v.optional(
+        v.object({
+          player1: v.optional(
+            v.object({ action: v.string(), cardIndex: v.optional(v.number()) }),
+          ),
+          player2: v.optional(
+            v.object({ action: v.string(), cardIndex: v.optional(v.number()) }),
+          ),
+        }),
+      ),
+      protectStreak1: v.optional(v.array(v.number())),
+      protectStreak2: v.optional(v.array(v.number())),
 
       status: v.union(
         v.literal('initializing'), // battle setup in progress
@@ -186,9 +205,21 @@ export default defineSchema({
         targetHealth: v.optional(v.number()),
         turnId: v.string(),
         timestamp: v.number(),
-        kind: v.optional(v.union(v.literal('attack'), v.literal('switch'))),
+        kind: v.optional(
+          v.union(
+            v.literal('attack'),
+            v.literal('switch'),
+            v.literal('protect'),
+          ),
+        ),
         cardIndex: v.optional(v.number()),
         targetIndex: v.optional(v.number()),
+        moveElement: v.optional(
+          v.union(v.literal(0), v.literal(1), v.literal(2)),
+        ),
+        effectiveness: v.optional(v.number()),
+        protectSuccess: v.optional(v.boolean()),
+        blocked: v.optional(v.boolean()),
       }),
     ),
 

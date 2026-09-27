@@ -25,178 +25,75 @@ export function formatTimeLeft(expiresAt: number): string {
   return `${timeLeft}m left`;
 }
 
-export function getFallbackMoves(_nftType: number, cardDescription = '') {
-  const fallbackMoves = {
-    0: [
-      // Fire
-      {
-        name: 'Flame Burst',
-        description:
-          'Releases concentrated fire energy that burns opponents with intense heat damage.',
-        iconName: 'Flame',
-      },
-      {
-        name: 'Ember Strike',
-        description:
-          'Quick fiery attack that deals moderate damage with chance to burn.',
-        iconName: 'Zap',
-      },
-      {
-        name: 'Inferno Rage',
-        description:
-          'Powerful fire blast that engulfs enemies in scorching flames dealing heavy damage.',
-        iconName: 'Sun',
-      },
-      {
-        name: 'Solar Flare',
-        description:
-          'Brilliant flash of fire energy that blinds and damages all nearby enemies.',
-        iconName: 'Sparkles',
-      },
-    ],
-    1: [
-      // Water
-      {
-        name: 'Aqua Strike',
-        description:
-          'Powerful stream of water that crashes into enemies with tremendous crushing force.',
-        iconName: 'Zap',
-      },
-      {
-        name: 'Tidal Wave',
-        description:
-          'Massive wave attack that sweeps across battlefield dealing area water damage.',
-        iconName: 'Wind',
-      },
-      {
-        name: 'Hydro Cannon',
-        description:
-          'High pressure water blast that pierces through enemy defenses with precision.',
-        iconName: 'Target',
-      },
-      {
-        name: 'Ocean Wrath',
-        description:
-          'Summons the fury of the sea to overwhelm opponents with aquatic power.',
-        iconName: 'Crown',
-      },
-    ],
-    2: [
-      // Grass
-      {
-        name: 'Leaf Storm',
-        description:
-          'Whirlwind of razor sharp leaves that slice through enemy defenses with precision.',
-        iconName: 'Leaf',
-      },
-      {
-        name: 'Root Strike',
-        description:
-          'Underground roots emerge to entangle and damage enemies from below surface.',
-        iconName: 'Shield',
-      },
-      {
-        name: 'Thorn Barrage',
-        description:
-          'Launches volley of poisonous thorns that pierce armor and inflict damage.',
-        iconName: 'Swords',
-      },
-      {
-        name: 'Nature Fury',
-        description:
-          'Channels raw power of nature to unleash devastating plant based attacks.',
-        iconName: 'Star',
-      },
-    ],
-  };
+export type ElementalType = 0 | 1 | 2;
+export type TypedMove = {
+  name: string;
+  description: string;
+  iconName: string;
+  kind: 'attack' | 'protect' | 'switchout';
+  element?: ElementalType;
+};
 
-  const description = cardDescription.toLowerCase();
+export function isElementalType(value: number): value is ElementalType {
+  return value === 0 || value === 1 || value === 2;
+}
 
-  // The user description takes precedence over the separately assigned game
-  // type, especially for cards whose identity is not elemental (like ghosts).
-  if (
-    /\b(ghost|spirit|phantom|specter|spectre|wraith|haunted|undead)\b/.test(
-      description,
-    )
-  ) {
-    return [
-      {
-        name: 'Spectral Shift',
-        description:
-          'The spirit slips through a solid blow, then reappears nearby to strike before the opponent can react.',
-        iconName: 'Sparkles',
-      },
-      {
-        name: 'Haunting Grasp',
-        description:
-          'An eerie chill rattles the target’s resolve, opening a brief chance for the ghost to attack again.',
-        iconName: 'Heart',
-      },
-      {
-        name: 'Phantom Veil',
-        description:
-          'The phantom fades from sight, avoiding an incoming hit and returning with a sudden spectral counter.',
-        iconName: 'Eye',
-      },
-      {
-        name: 'Ethereal Surge',
-        description:
-          'The ghost gathers lingering spirits into one forceful strike that disrupts the enemy’s next attack.',
-        iconName: 'Zap',
-      },
-    ];
-  }
-
-  if (
-    /\b(fire|flame|fiery|ember|inferno|lava|volcano|phoenix)\b/.test(
-      description,
-    )
-  ) {
-    return fallbackMoves[0];
-  }
-
-  if (
-    /\b(water|ocean|sea|wave|tidal|aquatic|river|aqua|hydro)\b/.test(
-      description,
-    )
-  ) {
-    return fallbackMoves[1];
-  }
-
-  if (
-    /\b(grass|plant|forest|leaf|leaves|vine|thorn|nature|flower)\b/.test(
-      description,
-    )
-  ) {
-    return fallbackMoves[2];
-  }
-
-  // If the description doesn't establish an element, stay neutral instead of
-  // inventing one from the NFT's arbitrary game-type assignment.
+export function getFallbackMoves(
+  nftType: number,
+  cardIdentity = '',
+): TypedMove[] {
+  if (!isElementalType(nftType)) throw new Error('Unknown NFT type');
+  // The assigned NFT type determines combat mechanics; text only influences
+  // which of the two utility moves the card receives.
+  const names = [
+    ['Flame Burst', 'Ember Strike', 'Inferno Rage'],
+    ['Aqua Strike', 'Tidal Wave', 'Hydro Cannon'],
+    ['Leaf Storm', 'Root Strike', 'Thorn Barrage'],
+  ][nftType];
+  const icons = ['Flame', 'Wind', 'Leaf'];
+  const attacks: TypedMove[] = names.map((name) => ({
+    name,
+    description: `A ${getNFTTypeName(nftType).toLowerCase()} attack that damages the opposing active card.`,
+    iconName: icons[nftType],
+    kind: 'attack',
+    element: nftType,
+  }));
+  const switchout =
+    [...cardIdentity].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 2 ===
+    1;
   return [
-    {
-      name: 'Focused Strike',
-      description:
-        'A measured strike targets an opening in the opponent’s guard, creating space for the next move.',
-      iconName: 'Target',
-    },
-    {
-      name: 'Swift Feint',
-      description:
-        'A sudden feint draws out a response, letting the fighter reposition before the opponent can recover.',
-      iconName: 'Wind',
-    },
-    {
-      name: 'Guarded Stance',
-      description:
-        'The card braces for impact, absorbs incoming force, and steadies itself for another exchange.',
-      iconName: 'Shield',
-    },
-    {
-      name: 'Power Surge',
-      description:
-        'A burst of focused energy powers a decisive attack without relying on any particular elemental affinity.',
-      iconName: 'Zap',
-    },
+    ...attacks,
+    switchout
+      ? {
+          name: 'Switchout',
+          description: 'Switch to a living reserve from your battle lineup.',
+          iconName: 'Wind',
+          kind: 'switchout',
+        }
+      : {
+          name: 'Protect',
+          description:
+            'Block attacks this round. Consecutive uses have half the previous success chance.',
+          iconName: 'Shield',
+          kind: 'protect',
+        },
   ];
+}
+
+export function hasTypedMoves(
+  moves: readonly Partial<TypedMove>[] | undefined,
+  nftType: number,
+): boolean {
+  return (
+    !!moves &&
+    moves.length === 4 &&
+    isElementalType(nftType) &&
+    moves.every((move) => !!move.name) &&
+    new Set(moves.map((move) => move.name?.toLowerCase())).size === 4 &&
+    moves
+      .slice(0, 3)
+      .every((move) => move.kind === 'attack' && move.element === nftType) &&
+    (moves[3].kind === 'protect' || moves[3].kind === 'switchout') &&
+    moves[3].element === undefined
+  );
 }

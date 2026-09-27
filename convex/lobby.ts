@@ -2,6 +2,7 @@ import { mutation, query, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { requireUser } from './users';
 import { battleNFTReferenceSchema } from './schema';
+import { getFallbackMoves, hasTypedMoves } from '../lib/battle-utils';
 
 type NFTReference = { collection: string; item: string };
 
@@ -42,7 +43,11 @@ async function validatedRoster(
         collection,
         item,
         stats: nft.stats,
-        moves: nft.customMoves ?? [],
+        // Upgrade old saved moves only for new battle snapshots; existing
+        // matches keep their original move rules and names.
+        moves: hasTypedMoves(nft.customMoves, nft.stats.nftType)
+          ? nft.customMoves
+          : getFallbackMoves(nft.stats.nftType, `${collection}:${item}`),
       };
     }),
   );
@@ -271,6 +276,7 @@ export const startBattleFromLobby = mutation({
 
     const battleDbId = await ctx.db.insert('battles', {
       battleId,
+      rulesVersion: 2,
       player1Address: lobby.creatorAddress,
       player2Address: lobby.joinedPlayerAddress,
       player1Name: lobby.creatorName,
@@ -290,6 +296,9 @@ export const startBattleFromLobby = mutation({
         player1MaxHealth: player1Stats.maxHealth,
         player2MaxHealth: player2Stats.maxHealth,
         turnNumber: 0,
+        roundChoices: {},
+        protectStreak1: player1Roster.map(() => 0),
+        protectStreak2: player2Roster.map(() => 0),
         player1CardHealth: player1Roster.map((card) => card.stats.maxHealth),
         player2CardHealth: player2Roster.map((card) => card.stats.maxHealth),
         status: 'initializing',
