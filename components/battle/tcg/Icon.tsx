@@ -8,6 +8,7 @@ export type BattleIconName =
   | 'muted'
   | 'settings'
   | 'refresh'
+  | 'switch'
   | 'play'
   | 'plus'
   | 'chevron'
@@ -29,6 +30,7 @@ const iconPaths: Record<BattleIconName, string> = {
     'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0-5v2m0 13v2m9-8h-2m-14 0H3m15.4-6.4-1.4 1.4M7 17l-1.4 1.4m12.8 0L17 17M7 7 5.6 5.6',
   refresh:
     'M20 7v5h-5M4 17v-5h5m9.4-2A7 7 0 0 0 6.3 7L4 9m16 6-2.3 2A7 7 0 0 1 5.6 14',
+  switch: 'M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4',
   play: 'm8 5 11 7-11 7V5Z',
   plus: 'M12 5v14M5 12h14',
   chevron: 'm8 10 4 4 4-4',

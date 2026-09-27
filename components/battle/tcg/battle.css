@@ -2415,12 +2415,70 @@
   cursor: pointer;
   transition: filter 180ms ease, box-shadow 180ms ease;
 }
-.battle-client.live-match .local-lineup-nft {
+/* The slot carries the lineup position so the switch button can sit under the tilted card. */
+.battle-client.live-match .local-lineup-slot {
+  position: absolute;
+  z-index: 2;
+  width: max-content;
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+}
+.battle-client.live-match .local-lineup-slot > .local-lineup-nft {
   --lineup-pitch: 18deg;
-  transform: translate(-50%, -50%) rotateX(var(--lineup-pitch))
+  --piece-offset: translate(0, 0);
+  position: relative;
+  transform: rotateX(var(--lineup-pitch))
     rotateY(var(--lineup-yaw, 0deg)) rotateZ(var(--lineup-roll, 0deg));
   transform-origin: 50% 92%;
 }
+/* The rival's lineup mirrors ours: its own perspective layer is anchored the same distance
+   inside the rival's row as ours is inside our row, so the fan and tilt read identically. */
+.battle-client.live-match .opponent-lineup-row {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  perspective: 1100px;
+  perspective-origin: 50% 15%;
+  pointer-events: none;
+}
+.battle-client.live-match .opponent-lineup-nft {
+  --lineup-pitch: -18deg;
+  transform: translate(-50%, -50%) rotateX(var(--lineup-pitch))
+    rotateY(var(--lineup-yaw, 0deg)) rotateZ(var(--lineup-roll, 0deg));
+  transform-origin: 50% 8%;
+}
+.battle-client.live-match .live-lineup-switch {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 224, 159, .7);
+  border-radius: 99px;
+  background: rgba(16, 21, 31, .9);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .45);
+  color: #ffe09f;
+  font: 800 10px/1 Arial, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: live-fade-up 220ms ease-out both;
+  transition: background 150ms ease, box-shadow 180ms ease, translate 150ms ease, scale 90ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.battle-client.live-match .live-lineup-switch:hover {
+  background: rgba(58, 50, 38, .95);
+  box-shadow: 0 0 16px rgba(255, 200, 110, .35), 0 6px 14px rgba(0, 0, 0, .45);
+  translate: 0 -1px;
+}
+.battle-client.live-match .live-lineup-switch:active { translate: 0 0; scale: .97; }
+.battle-client.live-match .live-lineup-switch:focus-visible { outline: 2px solid #ffe09f; outline-offset: 2px; }
 .battle-client.live-match .battle-image-piece:hover,
 .battle-client.live-match .battle-image-piece:focus-visible,
 .battle-client.live-match .battle-image-piece.is-active {
@@ -2458,7 +2516,6 @@
 .live-inspect-moves { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .live-inspect-moves p { margin: 0; padding: 10px; background: #ffffff0d; border-radius: 8px; }
 .live-inspect-moves b { color: #f9d896; }
-.live-inspect-switch { width: 100%; margin-top: 16px; padding: 12px; border: 1px solid #ffe09f; border-radius: 8px; background: #ffe09f25; color: inherit; cursor: pointer; }
 .live-inspect-roster { display: flex; gap: 8px; margin-top: 16px; }
 .live-inspect-roster button { flex: 1; padding: 7px; border: 1px solid #756c5b; border-radius: 6px; background: #222d3b; color: inherit; cursor: pointer; }
 .live-inspect-roster button[aria-pressed='true'] { border-color: #ffe09f; }
@@ -2551,13 +2608,13 @@
 @keyframes live-nft-reveal {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) rotateX(var(--lineup-pitch, 0deg))
+    transform: var(--piece-offset, translate(-50%, -50%)) rotateX(var(--lineup-pitch, 0deg))
       rotateY(calc(var(--lineup-yaw, 0deg) + 90deg))
       rotateZ(var(--lineup-roll, 0deg)) scale(.85);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, -50%) rotateX(var(--lineup-pitch, 0deg))
+    transform: var(--piece-offset, translate(-50%, -50%)) rotateX(var(--lineup-pitch, 0deg))
       rotateY(var(--lineup-yaw, 0deg)) rotateZ(var(--lineup-roll, 0deg)) scale(1);
   }
 }
@@ -2570,7 +2627,7 @@
   .battle-client.live-match .active-nft-wrap { --card-width: clamp(90px, 24vw, 150px); --card-max-height: 23vh; }
   .battle-client.live-match .opponent-board-nft { top: 29% !important; }
   .battle-client.live-match .active-nft-wrap { top: 55%; }
-  .battle-client.live-match .local-lineup-nft { top: 76% !important; }
+  .battle-client.live-match .local-lineup-slot { top: 76% !important; }
 }
 @media (max-width: 440px) {
   .battle-client.live-match .battle-image-piece,
@@ -2834,7 +2891,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 .battle-client.live-match .live-move[data-kind='protect'] { --move-tint: #fff0c4; --move-tile: linear-gradient(145deg, rgba(214, 170, 92, .5), rgba(92, 70, 38, .6)); }
-.battle-client.live-match .live-move[data-kind='switchout'] { --move-tint: #b9d6ff; --move-tile: linear-gradient(145deg, rgba(67, 137, 244, .55), rgba(28, 56, 110, .6)); }
 .battle-client.live-match .live-move-icon {
   display: grid;
   width: 32px;
@@ -3011,13 +3067,6 @@
 }
 .live-inspect-heading button { line-height: 1; transition: background 150ms ease, border-color 150ms ease; }
 .live-inspect-heading button:hover { border-color: #ffe09f; background: rgba(255, 255, 255, .14); }
-.live-inspect-switch {
-  font-weight: 800;
-  letter-spacing: .06em;
-  transition: background 150ms ease, box-shadow 180ms ease, translate 150ms ease, scale 90ms ease;
-}
-.live-inspect-switch:hover { background: rgba(255, 224, 159, .3); box-shadow: 0 0 20px rgba(255, 200, 110, .22); translate: 0 -1px; }
-.live-inspect-switch:active { translate: 0 0; scale: .99; }
 .live-inspect-roster button { font-weight: 700; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; }
 .live-inspect-roster button:hover { border-color: #b8a47c; background: #2a3747; }
 .live-inspect-roster button[aria-pressed='true'] { color: #ffe09f; background: rgba(255, 224, 159, .14); }
@@ -3026,6 +3075,39 @@
 .live-inspect.is-reduced-motion,
 .live-inspect.is-reduced-motion *,
 .live-inspect-backdrop.is-reduced-motion { animation: none !important; transition: none !important; }
+
+/* Switch confirmation (portaled outside the stage) */
+.live-confirm-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(4, 9, 17, .6); backdrop-filter: blur(4px); animation: live-fade-in 160ms ease-out both; }
+.live-confirm {
+  position: fixed; z-index: 91; top: 50%; left: 50%;
+  width: min(340px, calc(100vw - 32px));
+  padding: 18px 18px 16px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 224, 159, .4); border-radius: 14px;
+  background: radial-gradient(circle at 25% 0%, #393036, #151d2a 60%, #10151f);
+  box-shadow: 0 22px 60px #000a, inset 0 1px #fff2;
+  color: #f9f1df;
+  animation: live-inspect-in 220ms cubic-bezier(.2, .8, .25, 1) both;
+}
+.live-confirm h2 { margin: 0 0 6px; font: 700 18px/1.25 Georgia, serif; overflow-wrap: anywhere; }
+.live-confirm p { margin: 0; color: #d3cec6; font-size: 13px; line-height: 1.5; }
+.live-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.live-confirm-actions button {
+  padding: 8px 14px;
+  border: 1px solid #756c5b; border-radius: 8px;
+  background: #222d3b; color: inherit;
+  font-size: 12px; font-weight: 800; letter-spacing: .06em;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 180ms ease, scale 90ms ease;
+}
+.live-confirm-actions button:hover { border-color: #b8a47c; background: #2a3747; }
+.live-confirm-actions button[data-variant='confirm'] { border-color: #ffe09f; background: rgba(255, 224, 159, .18); color: #ffe09f; }
+.live-confirm-actions button[data-variant='confirm']:hover { background: rgba(255, 224, 159, .3); box-shadow: 0 0 18px rgba(255, 200, 110, .22); }
+.live-confirm-actions button:active { scale: .97; }
+.live-confirm-actions button:focus-visible { outline: 2px solid #ffe09f; outline-offset: 2px; }
+.live-confirm.is-reduced-motion,
+.live-confirm.is-reduced-motion *,
+.live-confirm-backdrop.is-reduced-motion { animation: none !important; transition: none !important; }
 
 @keyframes live-art-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 @keyframes live-selected-glow { 50% { box-shadow: 0 0 0 6px rgba(255, 224, 159, .12), 0 0 30px rgba(255, 200, 110, .72), 0 12px 22px rgba(0, 0, 0, .55); } }
@@ -3127,7 +3209,16 @@
     --live-you-y: min(52%, calc(100% - var(--live-bottom-stack) - 150px));
   }
   .battle-client.live-match .battle-stage { min-height: 720px; }
-  .battle-client.live-match .local-lineup-nft { top: calc(100% - var(--live-bottom-stack) - 46px) !important; }
+  .battle-client.live-match .local-lineup-slot { top: calc(100% - var(--live-bottom-stack) - 52px) !important; }
+  /* Reserve cards sit too close together for a label, so the switch button is icon-only. */
+  .battle-client.live-match .live-lineup-switch {
+    top: calc(100% + 4px);
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+  }
+  .battle-client.live-match .live-lineup-switch span { display: none; }
   .battle-client.live-match .hand-tray { top: auto; bottom: calc(var(--live-bottom-stack) + 2px); height: 88px; }
   .battle-client.live-match .hand-caption { top: auto; bottom: calc(var(--live-bottom-stack) + 94px); }
 
@@ -3178,6 +3269,9 @@
   .battle-client.live-match .live-ko-ghost,
   .battle-client.live-match .live-move,
   .battle-client.live-match .live-log-row,
+  .battle-client.live-match .live-lineup-switch,
+  .live-confirm,
+  .live-confirm-backdrop,
   .live-inspect-backdrop,
   .live-inspect > img,
   .live-inspect > .live-inspect-fallback { animation: none !important; }
