@@ -52,6 +52,9 @@ export default function BattlePlayPage() {
   const [revealing, setRevealing] = useState(false);
   const [effectsEnabled, setEffectsEnabled] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
+  const inspectTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const inspectCloseRef = useRef<HTMLButtonElement | null>(null);
+  const inspectWasOpen = useRef(false);
   const lastSeenTurn = useRef<string | null>(null);
   const lastBattleId = useRef<string | null>(null);
   const previousStatus = useRef<string | null>(null);
@@ -97,6 +100,22 @@ export default function BattlePlayPage() {
       setRevealing(false);
     }
   }, [effectsEnabled]);
+  useEffect(() => {
+    if (inspected && !inspectWasOpen.current) inspectCloseRef.current?.focus();
+    inspectWasOpen.current = !!inspected;
+    if (!inspected) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setInspected(null);
+        requestAnimationFrame(() => {
+          if (inspectTriggerRef.current?.isConnected)
+            inspectTriggerRef.current.focus();
+        });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [inspected]);
   // Subscription updates are the only source of impact effects; never animate a predicted turn.
   useEffect(() => {
     if (!battle || !localAddress) return;
@@ -323,6 +342,21 @@ export default function BattlePlayPage() {
     ? getNFTMetadata(inspectedData[inspected.index]?.itemMetadata)
     : null;
   const inspectedImage = getIpfsImageUrl(inspectedMeta);
+  function openInspection(
+    trigger: HTMLButtonElement,
+    side: 'you' | 'opponent',
+    index: number,
+  ) {
+    inspectTriggerRef.current = trigger;
+    setInspected({ side, index });
+  }
+  function closeInspection() {
+    setInspected(null);
+    requestAnimationFrame(() => {
+      if (inspectTriggerRef.current?.isConnected)
+        inspectTriggerRef.current.focus();
+    });
+  }
   const canSwitch =
     inspected?.side === 'you' &&
     canAct &&
@@ -419,8 +453,8 @@ export default function BattlePlayPage() {
               label="opponent active"
               style={{ left: '50%', top: '34%' }}
               impact={impact === 'opponent'}
-              onInspect={() =>
-                setInspected({ side: 'opponent', index: opponentActiveIndex })
+              onInspect={(trigger) =>
+                openInspection(trigger, 'opponent', opponentActiveIndex)
               }
             />
           )}
@@ -435,8 +469,8 @@ export default function BattlePlayPage() {
                 health={yourHealth}
                 label="your active card"
                 impact={impact === 'you'}
-                onInspect={() =>
-                  setInspected({ side: 'you', index: yourActiveIndex })
+                onInspect={(trigger) =>
+                  openInspection(trigger, 'you', yourActiveIndex)
                 }
               />
               <div
@@ -483,7 +517,7 @@ export default function BattlePlayPage() {
                 left: `${49 + (index - (yourLineup.length - 1) / 2) * 14}%`,
                 top: '79%',
               }}
-              onInspect={() => setInspected({ side: 'you', index: cardIndex })}
+              onInspect={(trigger) => openInspection(trigger, 'you', cardIndex)}
             />
           ))}
           {rosterBattle &&
@@ -500,8 +534,8 @@ export default function BattlePlayPage() {
                   left: `${49 + (index - (opponentLineup.length - 1) / 2) * 14}%`,
                   top: '17%',
                 }}
-                onInspect={() =>
-                  setInspected({ side: 'opponent', index: cardIndex })
+                onInspect={(trigger) =>
+                  openInspection(trigger, 'opponent', cardIndex)
                 }
               />
             ))}
@@ -633,8 +667,9 @@ export default function BattlePlayPage() {
             <div className="live-inspect-heading">
               <b>CARD INSPECT</b>
               <button
+                ref={inspectCloseRef}
                 type="button"
-                onClick={() => setInspected(null)}
+                onClick={closeInspection}
                 aria-label="Close card inspection"
               >
                 ×
@@ -856,8 +891,9 @@ export default function BattlePlayPage() {
                     </small>
                     <b>{move.action}</b>
                     <span>
-                      {move.damage ?? 0} DAMAGE
-                      {move.wasCritical ? ' · CRITICAL' : ''}
+                      {move.kind === 'switch'
+                        ? 'CARD CHANGE'
+                        : `${move.damage ?? 0} DAMAGE${move.wasCritical ? ' · CRITICAL' : ''}`}
                     </span>
                     <time dateTime={new Date(move.timestamp).toISOString()}>
                       {new Date(move.timestamp).toLocaleTimeString()}

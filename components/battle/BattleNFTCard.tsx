@@ -35,7 +35,7 @@ export function BattleNFTCard({
   health?: number;
   label?: string;
   className?: string;
-  onInspect: () => void;
+  onInspect: (trigger: HTMLButtonElement) => void;
   style?: CSSProperties;
   active?: boolean;
   impact?: boolean;
@@ -50,7 +50,7 @@ export function BattleNFTCard({
       type="button"
       className={`battle-image-piece ${className ?? ''} ${active ? 'is-active' : ''} ${impact ? 'is-impact' : ''}`}
       style={style}
-      onClick={onInspect}
+      onClick={(event) => onInspect(event.currentTarget)}
       aria-label={`Inspect ${name}${health !== undefined ? `, ${health} health` : ''}${label ? `, ${label}` : ''}`}
     >
       {image && !failed ? (
