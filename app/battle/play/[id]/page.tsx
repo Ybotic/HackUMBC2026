@@ -15,6 +15,7 @@ import { Icon } from '@/components/battle/tcg/Icon';
 import { getPlayerDisplayName, getNFTTypeName } from '@/lib/battle-utils';
 import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 function InspectionImage({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
@@ -53,8 +54,6 @@ export default function BattlePlayPage() {
   const [effectsEnabled, setEffectsEnabled] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
   const inspectTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const inspectCloseRef = useRef<HTMLButtonElement | null>(null);
-  const inspectWasOpen = useRef(false);
   const lastSeenTurn = useRef<string | null>(null);
   const lastBattleId = useRef<string | null>(null);
   const previousStatus = useRef<string | null>(null);
@@ -100,22 +99,6 @@ export default function BattlePlayPage() {
       setRevealing(false);
     }
   }, [effectsEnabled]);
-  useEffect(() => {
-    if (inspected && !inspectWasOpen.current) inspectCloseRef.current?.focus();
-    inspectWasOpen.current = !!inspected;
-    if (!inspected) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setInspected(null);
-        requestAnimationFrame(() => {
-          if (inspectTriggerRef.current?.isConnected)
-            inspectTriggerRef.current.focus();
-        });
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [inspected]);
   // Subscription updates are the only source of impact effects; never animate a predicted turn.
   useEffect(() => {
     if (!battle || !localAddress) return;
@@ -352,10 +335,6 @@ export default function BattlePlayPage() {
   }
   function closeInspection() {
     setInspected(null);
-    requestAnimationFrame(() => {
-      if (inspectTriggerRef.current?.isConnected)
-        inspectTriggerRef.current.focus();
-    });
   }
   const canSwitch =
     inspected?.side === 'you' &&
@@ -451,7 +430,7 @@ export default function BattlePlayPage() {
               metadata={opponentRosterData[opponentActiveIndex]?.itemMetadata}
               health={opponentHealth}
               label="opponent active"
-              style={{ left: '50%', top: '34%' }}
+              style={{ left: '50%', top: '31%' }}
               impact={impact === 'opponent'}
               onInspect={(trigger) =>
                 openInspection(trigger, 'opponent', opponentActiveIndex)
@@ -515,7 +494,7 @@ export default function BattlePlayPage() {
               active={cardIndex === yourActiveIndex}
               style={{
                 left: `${49 + (index - (yourLineup.length - 1) / 2) * 14}%`,
-                top: '79%',
+                top: '80%',
               }}
               onInspect={(trigger) => openInspection(trigger, 'you', cardIndex)}
             />
@@ -532,7 +511,7 @@ export default function BattlePlayPage() {
                 active={cardIndex === opponentActiveIndex}
                 style={{
                   left: `${49 + (index - (opponentLineup.length - 1) / 2) * 14}%`,
-                  top: '17%',
+                  top: '13%',
                 }}
                 onInspect={(trigger) =>
                   openInspection(trigger, 'opponent', cardIndex)
@@ -562,68 +541,6 @@ export default function BattlePlayPage() {
             )}
           </div>
         )}
-
-        <header className="battle-topbar">
-          <div className="brand-lockup">
-            <Link
-              href="/battle"
-              className="brand-mark"
-              aria-label="Back to arena"
-            >
-              <i>✦</i>
-            </Link>
-            <span>
-              <b>MINT ARENA</b>
-              <small>NFT BATTLE</small>
-            </span>
-            <i className="brand-divider" />
-            <span className="topbar-mode">
-              LIVE MATCH <b>#{battleId.slice(-5).toUpperCase()}</b>
-            </span>
-          </div>
-          <div className="match-meta">
-            <span className="live-dot" />
-            {finished
-              ? 'MATCH COMPLETE'
-              : yourTurn
-                ? 'YOUR MOVE'
-                : 'RIVAL MOVE'}
-            <i /> TURN {battle.gameState.turnNumber}
-          </div>
-          <div className="topbar-actions">
-            <button
-              className={`icon-button ${effectsEnabled ? '' : 'is-active'}`}
-              type="button"
-              onClick={() => {
-                setEffectsEnabled((enabled) => !enabled);
-                setImpact(null);
-              }}
-              aria-label={
-                effectsEnabled
-                  ? 'Reduce battle effects'
-                  : 'Enable battle effects'
-              }
-              title={
-                effectsEnabled
-                  ? 'Reduce battle effects'
-                  : 'Enable battle effects'
-              }
-            >
-              <Icon name="shield" size={17} />
-            </button>
-            <button
-              className={`icon-button ${logOpen ? 'is-active' : ''}`}
-              type="button"
-              onClick={() => setLogOpen((open) => !open)}
-              aria-expanded={logOpen}
-              aria-controls="live-battle-log"
-              aria-label={logOpen ? 'Close battle log' : 'Open battle log'}
-              title="Battle log"
-            >
-              <Icon name="chat" size={17} />
-            </button>
-          </div>
-        </header>
 
         <aside
           className="right-rail live-health-rail"
@@ -662,98 +579,123 @@ export default function BattlePlayPage() {
           </div>
         </aside>
 
-        {inspectedCard && inspected && (
-          <aside className="live-inspect" aria-label="Card statistics">
-            <div className="live-inspect-heading">
-              <b>CARD INSPECT</b>
-              <button
-                ref={inspectCloseRef}
-                type="button"
-                onClick={closeInspection}
-                aria-label="Close card inspection"
+        <DialogPrimitive.Root
+          open={!!inspectedCard}
+          onOpenChange={(open) => {
+            if (!open) closeInspection();
+          }}
+        >
+          {inspectedCard && inspected && (
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Overlay className="live-inspect-backdrop" />
+              <DialogPrimitive.Content
+                className="live-inspect"
+                aria-describedby="live-inspect-subtitle"
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault();
+                  if (inspectTriggerRef.current?.isConnected)
+                    inspectTriggerRef.current.focus();
+                }}
               >
-                ×
-              </button>
-            </div>
-            <InspectionImage
-              src={inspectedImage}
-              name={inspectedMeta?.name || 'NFT artwork'}
-            />
-            <h2>{inspectedMeta?.name || `NFT #${inspectedCard.item}`}</h2>
-            <p>
-              {getNFTTypeName(inspectedCard.stats.nftType)} ·{' '}
-              {inspected.side === 'you' ? 'Your NFT' : 'Opponent NFT'}
-            </p>
-            <dl className="live-inspect-stats">
-              <div>
-                <dt>HP</dt>
-                <dd>
-                  {inspectedHealth[inspected.index] ??
-                    inspectedCard.stats.maxHealth}
-                  /{inspectedCard.stats.maxHealth}
-                </dd>
-              </div>
-              {(
-                [
-                  'attack',
-                  'defense',
-                  'speed',
-                  'strength',
-                  'intelligence',
-                  'luck',
-                ] as const
-              ).map((stat) => (
-                <div key={stat}>
-                  <dt>{stat}</dt>
-                  <dd>{inspectedCard.stats[stat]}</dd>
-                </div>
-              ))}
-            </dl>
-            {inspectedMeta?.description && <p>{inspectedMeta.description}</p>}
-            <div className="live-inspect-moves">
-              {(
-                inspectedCard.moves ??
-                inspectedData[inspected.index]?.customMoves ??
-                []
-              ).map((move, index) => (
-                <p key={`${move.name}-${index}`}>
-                  <b>{move.name}</b> · {move.description}
-                </p>
-              ))}
-            </div>
-            {canSwitch && (
-              <button
-                className="live-inspect-switch"
-                type="button"
-                onClick={() => void switchCard()}
-              >
-                {needsReplacement
-                  ? 'Choose replacement'
-                  : 'Switch to this card (uses turn)'}
-              </button>
-            )}
-            {rosterBattle && (
-              <div
-                className="live-inspect-roster"
-                aria-label="Browse roster cards"
-              >
-                {inspectedRoster.map((card, index) => (
-                  <button
-                    key={`${card.collection}:${card.item}`}
+                <div className="live-inspect-heading">
+                  <span>
+                    CARD INSPECT ·{' '}
+                    {inspected.side === 'you'
+                      ? 'YOUR COLLECTION'
+                      : 'RIVAL COLLECTION'}
+                  </span>
+                  <DialogPrimitive.Close
                     type="button"
-                    aria-label={`Inspect NFT ${index + 1}`}
-                    aria-pressed={index === inspected.index}
-                    onClick={() =>
-                      setInspected({ side: inspected.side, index })
-                    }
+                    aria-label="Close card inspection"
                   >
-                    {index + 1}
+                    ×
+                  </DialogPrimitive.Close>
+                </div>
+                <InspectionImage
+                  src={inspectedImage}
+                  name={inspectedMeta?.name || 'NFT artwork'}
+                />
+                <DialogPrimitive.Title>
+                  {inspectedMeta?.name || `NFT #${inspectedCard.item}`}
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Description id="live-inspect-subtitle">
+                  {getNFTTypeName(inspectedCard.stats.nftType)} ·{' '}
+                  {inspected.side === 'you' ? 'Your NFT' : 'Opponent NFT'}
+                </DialogPrimitive.Description>
+                <dl className="live-inspect-stats">
+                  <div>
+                    <dt>HP</dt>
+                    <dd>
+                      {inspectedHealth[inspected.index] ??
+                        inspectedCard.stats.maxHealth}
+                      /{inspectedCard.stats.maxHealth}
+                    </dd>
+                  </div>
+                  {(
+                    [
+                      'attack',
+                      'defense',
+                      'speed',
+                      'strength',
+                      'intelligence',
+                      'luck',
+                    ] as const
+                  ).map((stat) => (
+                    <div key={stat}>
+                      <dt>{stat}</dt>
+                      <dd>{inspectedCard.stats[stat]}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {inspectedMeta?.description && (
+                  <p>{inspectedMeta.description}</p>
+                )}
+                <div className="live-inspect-moves">
+                  {(
+                    inspectedCard.moves ??
+                    inspectedData[inspected.index]?.customMoves ??
+                    []
+                  ).map((move, index) => (
+                    <p key={`${move.name}-${index}`}>
+                      <b>{move.name}</b> · {move.description}
+                    </p>
+                  ))}
+                </div>
+                {canSwitch && (
+                  <button
+                    className="live-inspect-switch"
+                    type="button"
+                    onClick={() => void switchCard()}
+                  >
+                    {needsReplacement
+                      ? 'Choose replacement'
+                      : 'Switch to this card (uses turn)'}
                   </button>
-                ))}
-              </div>
-            )}
-          </aside>
-        )}
+                )}
+                {rosterBattle && (
+                  <div
+                    className="live-inspect-roster"
+                    aria-label="Browse roster cards"
+                  >
+                    {inspectedRoster.map((card, index) => (
+                      <button
+                        key={`${card.collection}:${card.item}`}
+                        type="button"
+                        aria-label={`Inspect NFT ${index + 1}`}
+                        aria-pressed={index === inspected.index}
+                        onClick={() =>
+                          setInspected({ side: inspected.side, index })
+                        }
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+          )}
+        </DialogPrimitive.Root>
 
         <div className="player-console">
           <div className="console-profile">
@@ -788,6 +730,31 @@ export default function BattlePlayPage() {
           <div className="action-message" role="status" aria-live="polite">
             <span className="message-mark">✦</span>
             <span>{statusMessage}</span>
+          </div>
+          <div className="live-quick-controls">
+            <Link
+              href="/battle"
+              className="live-arena-link"
+              aria-label="Return to arena"
+            >
+              ← Arena
+            </Link>
+            <button
+              className="live-effects-toggle"
+              type="button"
+              onClick={() => {
+                setEffectsEnabled((enabled) => !enabled);
+                setImpact(null);
+              }}
+              aria-label={
+                effectsEnabled
+                  ? 'Reduce battle effects'
+                  : 'Enable battle effects'
+              }
+              aria-pressed={!effectsEnabled}
+            >
+              <Icon name="shield" size={16} />
+            </button>
           </div>
           <div className="action-buttons">
             <button

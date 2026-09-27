@@ -41,20 +41,33 @@ export function BattleNFTCard({
   impact?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
+  const [ratio, setRatio] = useState(1);
   const meta = getNFTMetadata(metadata);
   const image = getIpfsImageUrl(meta);
-  useEffect(() => setFailed(false), [image]);
+  useEffect(() => {
+    setFailed(false);
+    setRatio(1);
+  }, [image]);
   const name = meta?.name || `NFT #${card.item}`;
   return (
     <button
       type="button"
       className={`battle-image-piece ${className ?? ''} ${active ? 'is-active' : ''} ${impact ? 'is-impact' : ''}`}
-      style={style}
+      style={{ ...style, '--art-ratio': failed ? 1 : ratio } as CSSProperties}
       onClick={(event) => onInspect(event.currentTarget)}
       aria-label={`Inspect ${name}${health !== undefined ? `, ${health} health` : ''}${label ? `, ${label}` : ''}`}
     >
       {image && !failed ? (
-        <img src={image} alt="" onError={() => setFailed(true)} />
+        <img
+          src={image}
+          alt=""
+          onLoad={(event) => {
+            const { naturalWidth, naturalHeight } = event.currentTarget;
+            if (naturalWidth && naturalHeight)
+              setRatio(naturalWidth / naturalHeight);
+          }}
+          onError={() => setFailed(true)}
+        />
       ) : (
         <span className="battle-image-fallback">Artwork unavailable</span>
       )}
