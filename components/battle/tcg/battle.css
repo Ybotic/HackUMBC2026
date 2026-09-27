@@ -449,8 +449,7 @@
 }
 
 .battle-client .connection-pill i,
-.battle-client .live-dot,
-.battle-client .footer-status-dot {
+.battle-client .live-dot {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -1368,23 +1367,6 @@
 .battle-client .action-attack .button-icon { color: #ffd079; }
 .battle-client .action-attack:not(:disabled):hover { border-color: rgba(255, 190, 118, 0.56); }
 
-.battle-client .stage-footer {
-  position: absolute;
-  right: 5.4%;
-  bottom: 0.7%;
-  z-index: 14;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: rgba(255, 255, 255, 0.34);
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
-
-.battle-client .footer-status-dot { width: 5px; height: 5px; }
-.battle-client .stage-footer i { width: 2px; height: 2px; border-radius: 50%; background: rgba(255, 255, 255, 0.38); }
-
 .battle-client .battle-topbar {
   position: absolute;
   inset: 0 0 auto;
@@ -1685,7 +1667,6 @@
   .battle-client .button-icon { width: 21px; height: 21px; }
   .battle-client .action-button b { font-size: 5px; }
   .battle-client .action-button small { font-size: 4.5px; }
-  .battle-client .stage-footer { right: 2%; bottom: 0.3%; font-size: 4px; }
 }
 
 @media (max-width: 440px) {
@@ -1729,7 +1710,6 @@
   .battle-client .action-button { min-height: 36px; padding: 4px; }
   .battle-client .button-icon { width: 22px; height: 22px; }
   .battle-client .action-buttons { gap: 4px; }
-  .battle-client .stage-footer { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2608,8 +2588,6 @@
 }
 .battle-client.live-match .battle-stage { min-height: 540px; }
 
-.battle-client.live-match .stage-footer { font-size: 7.5px; }
-
 /* Cards */
 .battle-client.live-match .active-nft-wrap { top: var(--live-you-y); }
 .battle-client.live-match .active-nft-wrap > .battle-image-piece {
@@ -3127,7 +3105,6 @@
     --live-you-y: min(52%, calc(100% - var(--live-bottom-stack) - 150px));
   }
   .battle-client.live-match .battle-stage { min-height: 720px; }
-  .battle-client.live-match .stage-footer { display: none; }
   .battle-client.live-match .local-lineup-nft { top: calc(100% - var(--live-bottom-stack) - 46px) !important; }
   .battle-client.live-match .hand-tray { top: auto; bottom: calc(var(--live-bottom-stack) + 2px); height: 88px; }
   .battle-client.live-match .hand-caption { top: auto; bottom: calc(var(--live-bottom-stack) + 94px); }

@@ -998,11 +998,6 @@ export default function BattlePlayPage() {
           )}
         </section>
 
-        <div className="stage-footer">
-          <span className="footer-status-dot" /> LIVE MATCH <i /> TURN
-          SYNCHRONIZED WITH THE ARENA
-        </div>
-
         {finished ? (
           <section
             className="live-result"
