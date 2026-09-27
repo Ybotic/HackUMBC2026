@@ -77,7 +77,7 @@ export function Navbar() {
             'relative isolate flex items-center transition-colors rounded-md',
             isMobile
               ? 'justify-center p-2'
-              : 'space-x-2 px-3 py-2 text-sm font-medium',
+              : 'gap-2 px-3 py-2 text-sm font-medium',
             isActive(item.href)
               ? 'text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -87,7 +87,8 @@ export function Navbar() {
           {isActive(item.href) && (
             <motion.span
               layoutId={isMobile ? 'mobile-nav-active' : 'desktop-nav-active'}
-              className="absolute inset-0 -z-10 rounded-md bg-primary"
+              className="absolute inset-0 -z-10 bg-primary"
+              style={{ borderRadius: 6 }}
               transition={
                 reduceMotion
                   ? { duration: 0 }
