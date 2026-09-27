@@ -51,6 +51,18 @@ const shortenId = (id: string, head = 4, tail = 4) =>
     ? `${id.slice(0, head)}…${id.slice(-tail)}`
     : id;
 
+const getPowerScore = (stats: any) =>
+  Math.round(
+    (stats.attack +
+      stats.defense +
+      stats.intelligence +
+      stats.luck +
+      stats.speed +
+      stats.strength +
+      stats.maxHealth) /
+      7,
+  );
+
 interface CreateAuctionProps {
   userAddress: string;
   preloadedNfts: Preloaded<typeof api.nft.getUserNFTs>;
@@ -440,136 +452,109 @@ export function CreateAuction({
                         return (
                           <Card
                             key={`${nft.collection}-${nft.item}`}
-                            className="cursor-pointer transition-all duration-200 hover:shadow-xl hover:scale-[1.02] p-6 h-64 group"
+                            role="button"
+                            tabIndex={0}
                             onClick={() => setSelectedNft(nft)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedNft(nft);
+                              }
+                            }}
+                            className="group min-w-0 cursor-pointer gap-5 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                           >
-                            <div className="flex flex-col h-full space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-border bg-card flex-shrink-0">
-                                      {imageUrl ? (
-                                        <img
-                                          src={imageUrl}
-                                          alt={
-                                            metadata?.name || `NFT ${nft.item}`
-                                          }
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            e.currentTarget.style.display =
-                                              'none';
-                                          }}
-                                        />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-semibold text-lg truncate">
-                                        {metadata?.name || `NFT #${nft.item}`}
-                                      </h4>
-                                      <p className="text-sm text-muted-foreground truncate">
-                                        Collection {shortenId(nft.collection)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                                {nft.stats && (
-                                  <div className="flex flex-col items-end gap-1">
-                                    <div
-                                      className={`w-4 h-4 rounded-full ${NFT_TYPE_COLORS[nft.stats.nftType as keyof typeof NFT_TYPE_COLORS]}`}
-                                    />
-                                    <span className="text-xs font-medium">
-                                      {NFT_TYPES[nft.stats.nftType]}
-                                    </span>
+                            <div className="flex min-w-0 items-center gap-4">
+                              <div className="size-14 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={metadata?.name || `NFT ${nft.item}`}
+                                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex size-full items-center justify-center">
+                                    <ImageIcon className="size-5 text-muted-foreground" />
                                   </div>
                                 )}
                               </div>
-
+                              <div className="min-w-0 flex-1">
+                                <h4 className="truncate font-semibold leading-tight">
+                                  {metadata?.name || `NFT #${nft.item}`}
+                                </h4>
+                                <p
+                                  className="mt-1 truncate font-mono text-xs text-muted-foreground"
+                                  title={nft.collection}
+                                >
+                                  {shortenId(nft.collection)}
+                                </p>
+                              </div>
                               {nft.stats && (
-                                <div className="flex-1 space-y-3">
-                                  <div className="grid grid-cols-3 gap-2">
-                                    <div className="text-center p-2 bg-muted/50 rounded group-hover:bg-muted transition-colors">
-                                      <div className="text-xs text-muted-foreground">
-                                        ATK
-                                      </div>
-                                      <div className="font-bold">
-                                        {nft.stats.attack}
-                                      </div>
-                                    </div>
-                                    <div className="text-center p-2 bg-muted/50 rounded group-hover:bg-muted transition-colors">
-                                      <div className="text-xs text-muted-foreground">
-                                        DEF
-                                      </div>
-                                      <div className="font-bold">
-                                        {nft.stats.defense}
-                                      </div>
-                                    </div>
-                                    <div className="text-center p-2 bg-muted/50 rounded group-hover:bg-muted transition-colors">
-                                      <div className="text-xs text-muted-foreground">
-                                        HP
-                                      </div>
-                                      <div className="font-bold">
-                                        {nft.stats.maxHealth}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="text-center p-2 bg-muted/50 rounded group-hover:bg-muted transition-colors cursor-help">
-                                        <div className="text-xs text-muted-foreground">
-                                          Power Score
-                                        </div>
-                                        <div className="font-bold text-primary">
-                                          {Math.round(
-                                            (nft.stats.attack +
-                                              nft.stats.defense +
-                                              nft.stats.intelligence +
-                                              nft.stats.luck +
-                                              nft.stats.speed +
-                                              nft.stats.strength +
-                                              nft.stats.maxHealth) /
-                                              7,
-                                          )}
-                                        </div>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="bg-card border-border text-card-foreground p-3 max-w-none">
-                                      <div className="flex items-center gap-2 text-xs">
-                                        <span className="text-muted-foreground">
-                                          Power Score:
-                                        </span>
-                                        <span className="text-primary font-medium">
-                                          ({nft.stats.attack} +{' '}
-                                          {nft.stats.defense} +{' '}
-                                          {nft.stats.intelligence} +{' '}
-                                          {nft.stats.luck} + {nft.stats.speed} +{' '}
-                                          {nft.stats.strength} +{' '}
-                                          {nft.stats.maxHealth}) ÷ 7
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                          =
-                                        </span>
-                                        <span className="font-bold text-foreground">
-                                          {Math.round(
-                                            (nft.stats.attack +
-                                              nft.stats.defense +
-                                              nft.stats.intelligence +
-                                              nft.stats.luck +
-                                              nft.stats.speed +
-                                              nft.stats.strength +
-                                              nft.stats.maxHealth) /
-                                              7,
-                                          )}
-                                        </span>
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
+                                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                                  <span
+                                    className={`size-2 rounded-full ${NFT_TYPE_COLORS[nft.stats.nftType as keyof typeof NFT_TYPE_COLORS] || 'bg-gray-400'}`}
+                                  />
+                                  {NFT_TYPES[nft.stats.nftType]}
+                                </span>
                               )}
                             </div>
+
+                            {nft.stats && (
+                              <div className="grid grid-cols-4 divide-x rounded-lg border bg-muted/30">
+                                {[
+                                  { label: 'ATK', value: nft.stats.attack },
+                                  { label: 'DEF', value: nft.stats.defense },
+                                  { label: 'HP', value: nft.stats.maxHealth },
+                                ].map((stat) => (
+                                  <div
+                                    key={stat.label}
+                                    className="py-2 text-center"
+                                  >
+                                    <div className="text-[10px] font-medium tracking-wider text-muted-foreground">
+                                      {stat.label}
+                                    </div>
+                                    <div className="text-sm font-semibold tabular-nums">
+                                      {stat.value}
+                                    </div>
+                                  </div>
+                                ))}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="cursor-help py-2 text-center">
+                                      <div className="text-[10px] font-medium tracking-wider text-muted-foreground">
+                                        PWR
+                                      </div>
+                                      <div className="text-sm font-semibold tabular-nums text-primary">
+                                        {getPowerScore(nft.stats)}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-card border-border text-card-foreground p-3 max-w-none">
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <span className="text-muted-foreground">
+                                        Power Score:
+                                      </span>
+                                      <span className="text-primary font-medium">
+                                        ({nft.stats.attack} +{' '}
+                                        {nft.stats.defense} +{' '}
+                                        {nft.stats.intelligence} +{' '}
+                                        {nft.stats.luck} + {nft.stats.speed} +{' '}
+                                        {nft.stats.strength} +{' '}
+                                        {nft.stats.maxHealth}) ÷ 7
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        =
+                                      </span>
+                                      <span className="font-bold text-foreground">
+                                        {getPowerScore(nft.stats)}
+                                      </span>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            )}
                           </Card>
                         );
                       })}
