@@ -1,341 +1,216 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import '@/components/battle/roster.css';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation } from 'convex/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useSolana } from '@/lib/providers/SolanaProvider';
-import { Button } from '@/components/ui/button';
-import { Users, ImageIcon } from 'lucide-react';
-import { PageStateCard } from '@/components/battle/PageStateCard';
-import { NFTSelector } from '@/components/battle/NFTSelector';
-import { toast } from 'sonner';
 import { useNFTs } from '@/hooks/useNFTs';
-import { OpponentNFTDisplay } from '@/components/lobby/OpponentNFTDisplay';
-import { PlayerCard } from '@/components/lobby/PlayerCard';
-import { LobbyStatusCard } from '@/components/lobby/LobbyStatusCard';
-import { WaitingPlayerDisplay } from '@/components/lobby/WaitingPlayerDisplay';
-import { BattleReadinessCard } from '@/components/lobby/BattleReadinessCard';
+import { PageStateCard } from '@/components/battle/PageStateCard';
+import {
+  OpponentRoster,
+  RosterSelector,
+  type NFTReference,
+} from '@/components/battle/RosterSelector';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
-interface LobbyPageProps {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
-export default function LobbyPage({ params }: LobbyPageProps) {
-  const { id } = React.use(params);
+export default function LobbyPage() {
+  const params = useParams();
+  const lobbyId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
   const router = useRouter();
-  const {
-    selectedAccount,
-    isInitialized,
-    isReady: isWalletReady,
-  } = useSolana();
+  const { selectedAccount, isInitialized, isReady: walletReady } = useSolana();
   const { nfts } = useNFTs();
-
-  const [selectedNFT, setSelectedNFT] = useState<any>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [isStartingBattle, setIsStartingBattle] = useState(false);
-
-  const lobbyId = Array.isArray(id) ? id[0] : (id ?? '');
-  const shareUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/battle/lobby/${lobbyId}`
-      : '';
-
-  const lobby = useQuery(api.lobby.getLobby, { lobbyId });
-  const battleIdFromLobby = useQuery(
+  const lobby = useQuery(
+    api.lobby.getLobby,
+    selectedAccount?.address
+      ? { lobbyId, viewerAddress: selectedAccount.address }
+      : 'skip',
+  );
+  const battleId = useQuery(
     api.lobby.getBattleFromLobby,
     lobby?.status === 'started' ? { lobbyId } : 'skip',
   );
-  const updateLobbyNFT = useMutation(api.lobby.updateLobbyNFT);
-  const startBattleFromLobby = useMutation(api.lobby.startBattleFromLobby);
+  const updateRoster = useMutation(api.lobby.updateLobbyRoster);
+  const startBattle = useMutation(api.lobby.startBattleFromLobby);
   const joinLobby = useMutation(api.lobby.joinLobby);
-  const creatorNFTMetadata = useQuery(
-    api.nft.getNFTMetadata,
-    lobby?.creatorNFT
-      ? {
-          collection: lobby.creatorNFT.collection,
-          item: lobby.creatorNFT.item,
-        }
-      : 'skip',
-  );
-  const joinerNFTMetadata = useQuery(
-    api.nft.getNFTMetadata,
-    lobby?.joinerNFT
-      ? {
-          collection: lobby.joinerNFT.collection,
-          item: lobby.joinerNFT.item,
-        }
-      : 'skip',
-  );
-
-  const isCreator = selectedAccount?.address === lobby?.creatorAddress;
-  const isJoiner = selectedAccount?.address === lobby?.joinedPlayerAddress;
-  const isInLobby = isCreator || isJoiner;
+  const [busy, setBusy] = useState(false);
+  const address = selectedAccount?.address;
+  const isCreator = address === lobby?.creatorAddress;
+  const isJoiner = address === lobby?.joinedPlayerAddress;
+  const own = isCreator ? lobby?.creatorRoster : lobby?.joinerRoster;
+  const theirs = isCreator ? lobby?.joinerRoster : lobby?.creatorRoster;
+  const bothReady =
+    !!lobby?.creatorRoster?.isReady && !!lobby?.joinerRoster?.isReady;
 
   useEffect(() => {
-    if (lobby && selectedAccount && !isInLobby && lobby.status === 'waiting') {
-      joinLobby({
+    if (
+      lobby?.status === 'waiting' &&
+      address &&
+      !isCreator &&
+      !isJoiner &&
+      !lobby.joinedPlayerAddress
+    ) {
+      void joinLobby({
         lobbyId,
-        playerAddress: selectedAccount.address,
-        playerName: selectedAccount.meta.name,
-      }).catch(console.error);
+        playerAddress: address,
+        playerName: selectedAccount?.meta.name,
+      }).catch((error) => toast.error(String(error)));
     }
-  }, [lobby, selectedAccount, isInLobby]);
+  }, [
+    lobby?.status,
+    lobby?.joinedPlayerAddress,
+    address,
+    isCreator,
+    isJoiner,
+    lobbyId,
+    joinLobby,
+    selectedAccount?.meta.name,
+  ]);
 
   useEffect(() => {
-    if (lobby?.status === 'started' && battleIdFromLobby) {
-      router.push(`/battle/play/${battleIdFromLobby}`);
-    }
-  }, [lobby?.status, battleIdFromLobby, router]);
+    if (lobby?.status === 'started' && battleId)
+      router.push(`/battle/play/${battleId}`);
+  }, [lobby?.status, battleId, router]);
 
-  const handleNFTSelect = async (nft: any) => {
-    if (!selectedAccount || !isInLobby) return;
-
-    setSelectedNFT(nft);
-
+  async function save(cards: NFTReference[], isReady: boolean) {
+    if (!address || busy) return;
+    setBusy(true);
     try {
-      await updateLobbyNFT({
-        lobbyId,
-        playerAddress: selectedAccount.address,
-        nftCollection: nft.collection,
-        nftItem: nft.item,
-        isReady: false, // Reset ready state when changing NFT
-      });
-      setIsReady(false);
+      await updateRoster({ lobbyId, playerAddress: address, cards, isReady });
     } catch (error) {
-      console.error('Failed to update NFT:', error);
-      toast.error('Failed to select NFT');
-    }
-  };
-
-  const handleReadyToggle = async () => {
-    if (!selectedAccount || !selectedNFT || !isInLobby) return;
-
-    const newReadyState = !isReady;
-    setIsReady(newReadyState);
-
-    try {
-      await updateLobbyNFT({
-        lobbyId,
-        playerAddress: selectedAccount.address,
-        nftCollection: selectedNFT.collection,
-        nftItem: selectedNFT.item,
-        isReady: newReadyState,
-      });
-    } catch (error) {
-      console.error('Failed to update ready state:', error);
-      setIsReady(!newReadyState); // Revert on error
-      toast.error('Failed to update ready state');
-    }
-  };
-
-  const handleStartBattle = async () => {
-    if (!selectedAccount || !lobby) return;
-
-    setIsStartingBattle(true);
-
-    try {
-      const battleData = await startBattleFromLobby({
-        lobbyId,
-        initiatorAddress: selectedAccount.address,
-      });
-
-      toast.success('Battle created successfully!');
-      router.push(`/battle/play/${battleData.battleId}`);
-    } catch (error: any) {
-      console.error('Failed to start battle:', error);
-      toast.error(error.message || 'Failed to start battle');
+      toast.error(
+        error instanceof Error ? error.message : 'Could not update roster',
+      );
     } finally {
-      setIsStartingBattle(false);
+      setBusy(false);
     }
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedLink(true);
-      toast.success('Lobby link copied!');
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy link');
-    }
-  };
-
-  if (!isInitialized) {
-    return (
-      <PageStateCard
-        variant="loading"
-        message="Initializing wallet connection..."
-      />
-    );
   }
 
-  if (!selectedAccount) {
+  async function begin() {
+    if (!address || busy) return;
+    setBusy(true);
+    try {
+      const result = await startBattle({ lobbyId, initiatorAddress: address });
+      router.push(`/battle/play/${result.battleId}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not start battle',
+      );
+      setBusy(false);
+    }
+  }
+
+  if (!isInitialized)
+    return (
+      <PageStateCard variant="loading" message="Connecting to the lobby..." />
+    );
+  if (!address)
     return (
       <PageStateCard
         variant="walletConnect"
-        message="Please connect your wallet to join this lobby."
+        message="Connect your wallet to join this lobby."
       />
     );
-  }
-
-  if (!lobby) {
+  if (lobby === undefined)
     return <PageStateCard variant="loading" message="Loading lobby..." />;
-  }
-
-  if (lobby.status === 'expired' || lobby.status === 'cancelled') {
+  if (!lobby)
     return (
       <PageStateCard
-        title={`Lobby ${lobby.status}`}
-        message="This lobby is no longer available."
-        buttonText="Back to Battle Arena"
+        variant="error"
+        title="Lobby not found"
+        message="This lobby does not exist."
         redirectTo="/battle"
       />
     );
-  }
-
-  if (lobby.status === 'started') {
+  if (lobby.status === 'cancelled' || lobby.status === 'expired')
     return (
       <PageStateCard
-        variant="loading"
-        message="Battle is starting! Redirecting to battle arena..."
+        title="Lobby closed"
+        message="This lobby is no longer available."
+        redirectTo="/battle"
       />
     );
-  }
-
-  const bothPlayersReady =
-    lobby.creatorNFT?.isReady && lobby.joinerNFT?.isReady;
-  const canStartBattle = bothPlayersReady && isCreator && isWalletReady;
-
-  // Check if current player can mark themselves as ready
-  const canBeReady = isWalletReady;
+  if (lobby.status === 'started')
+    return <PageStateCard variant="loading" message="Opening battle..." />;
+  if (!isCreator && !isJoiner)
+    return lobby.joinedPlayerAddress || lobby.status === 'ready' ? (
+      <PageStateCard
+        variant="error"
+        title="Lobby full"
+        message="Only the two participants can join this lobby."
+        redirectTo="/battle"
+      />
+    ) : (
+      <PageStateCard variant="loading" message="Joining lobby..." />
+    );
 
   return (
-    <div className="bg-background min-h-screen">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-6">
+    <main className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Battle Lobby</h1>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Lobby ID: {lobbyId}
+            <p className="text-muted-foreground">
+              Lobby {lobbyId} ·{' '}
+              {lobby.settings.isPrivate ? 'Private' : 'Public'}
             </p>
           </div>
-          <Button variant="outline" asChild>
-            <Link href="/battle">← Back to Arena</Link>
+          <Button asChild variant="outline">
+            <Link href="/battle">Back to arena</Link>
           </Button>
+        </header>
+        <p className="rounded-lg border p-4 text-sm">
+          {lobby.joinedPlayerAddress
+            ? 'Both players have joined.'
+            : 'Waiting for an opponent.'}{' '}
+          Choose 3–5 cards and lock your roster. Once both players lock, you can
+          inspect the opposing cards before choosing your three fighters.
+        </p>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-xl border p-5 space-y-4">
+            <h2 className="text-xl font-semibold">
+              Your roster {own?.isReady ? '· Locked' : ''}
+            </h2>
+            <RosterSelector
+              nfts={nfts ?? []}
+              cards={own?.cards ?? []}
+              isReady={!!own?.isReady}
+              disabled={busy || !walletReady}
+              onChange={(cards) => void save(cards, false)}
+              onReady={() => void save(own?.cards ?? [], !own?.isReady)}
+            />
+          </section>
+          <section className="rounded-xl border p-5 space-y-4">
+            <h2 className="text-xl font-semibold">
+              Opponent roster {theirs?.isReady ? '· Locked' : ''}
+            </h2>
+            <OpponentRoster cards={theirs?.cards ?? []} revealed={bothReady} />
+          </section>
+        </div>
+        <div className="rounded-xl border p-5 space-y-3">
+          <p role="status">
+            {bothReady
+              ? 'Both rosters locked. Start the battle to choose your three cards after reviewing the opponent.'
+              : 'Waiting for both players to lock their rosters.'}
+          </p>
+          {isCreator ? (
+            <Button
+              onClick={() => void begin()}
+              disabled={!bothReady || busy || !walletReady}
+            >
+              Start battle
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              The lobby creator starts the match once both rosters are locked.
+            </p>
+          )}
         </div>
       </div>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <LobbyStatusCard lobby={lobby} shareUrl={shareUrl} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <PlayerCard
-              playerNumber={1}
-              title="Player 1 (Creator)"
-              playerName={lobby.creatorName}
-              playerAddress={lobby.creatorAddress}
-              isCurrentUser={isCreator}
-              nftData={lobby.creatorNFT}
-              isJoined={true}
-              gradientColor="from-primary/5"
-              avatarColors="from-red-500 to-red-600"
-            >
-              {isCreator ? (
-                <NFTSelector
-                  nfts={nfts || []}
-                  selectedNFT={selectedNFT}
-                  onNFTSelect={handleNFTSelect}
-                  isReady={isReady}
-                  onReadyToggle={handleReadyToggle}
-                  canBeReady={canBeReady}
-                />
-              ) : (
-                <div className="space-y-6">
-                  {lobby.creatorNFT ? (
-                    <OpponentNFTDisplay
-                      nftData={lobby.creatorNFT}
-                      nftMetadata={creatorNFTMetadata}
-                      playerColor="bg-primary"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Selecting NFT...
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </PlayerCard>
-
-            <PlayerCard
-              playerNumber={2}
-              title={`Player 2 ${lobby.joinedPlayerAddress ? '(Joined)' : '(Waiting)'}`}
-              playerName={lobby.joinedPlayerName}
-              playerAddress={lobby.joinedPlayerAddress}
-              isCurrentUser={isJoiner}
-              nftData={lobby.joinerNFT}
-              isJoined={!!lobby.joinedPlayerAddress}
-              gradientColor="from-blue-500/5"
-              avatarColors="from-blue-500 to-blue-600"
-            >
-              {lobby.joinedPlayerAddress ? (
-                isJoiner ? (
-                  <NFTSelector
-                    nfts={nfts || []}
-                    selectedNFT={selectedNFT}
-                    onNFTSelect={handleNFTSelect}
-                    isReady={isReady}
-                    onReadyToggle={handleReadyToggle}
-                    canBeReady={canBeReady}
-                  />
-                ) : (
-                  <div className="space-y-6">
-                    {lobby.joinerNFT ? (
-                      <OpponentNFTDisplay
-                        nftData={lobby.joinerNFT}
-                        nftMetadata={joinerNFTMetadata}
-                        playerColor="bg-blue-500"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                          <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            Selecting NFT...
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              ) : (
-                <WaitingPlayerDisplay />
-              )}
-            </PlayerCard>
-          </div>
-
-          <BattleReadinessCard
-            bothPlayersReady={bothPlayersReady || false}
-            isCreator={isCreator}
-            canStartBattle={canStartBattle || false}
-            isStartingBattle={isStartingBattle}
-            onStartBattle={handleStartBattle}
-            creatorReady={!!lobby.creatorNFT?.isReady}
-            joinerReady={!!lobby.joinerNFT?.isReady}
-          />
-        </div>
-      </main>
-    </div>
+    </main>
   );
 }

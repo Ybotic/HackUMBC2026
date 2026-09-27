@@ -131,7 +131,7 @@ export default function BattlePage() {
                 Battle Arena
               </h1>
               <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-                Pick a card, find a rival, and take your place at the table.
+                Bring 3–5 NFTs, find a rival, and choose your three-card team.
               </p>
             </div>
           </div>
@@ -179,7 +179,11 @@ export default function BattlePage() {
                   className="w-full justify-between"
                 >
                   <Link href={`/battle/play/${recent.battleId}`}>
-                    <span>Continue your active match</span>
+                    <span>
+                      {recent.gameState.status === 'initializing'
+                        ? 'Choose your battle lineup'
+                        : 'Continue your active match'}
+                    </span>
                     <ArrowRight />
                   </Link>
                 </Button>
@@ -242,9 +246,9 @@ export default function BattlePage() {
                 </form>
               </div>
 
-              {nfts?.length === 0 && (
+              {nfts !== undefined && nfts.length < 3 && (
                 <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                  No cards in your collection yet.{' '}
+                  You need at least three synced NFTs to ready up.{' '}
                   <Link
                     className="font-medium text-primary underline-offset-4 hover:underline"
                     href="/generate"
@@ -482,8 +486,10 @@ export default function BattlePage() {
                               vs {opponent}
                             </p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {battle.gameState.turnNumber} turns · {cardType}{' '}
-                              card
+                              {battle.gameState.turnNumber} turns ·{' '}
+                              {battle.player1Roster && battle.player2Roster
+                                ? '3-card lineup'
+                                : `${cardType} card`}
                             </p>
                           </div>
                         </div>

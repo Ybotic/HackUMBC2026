@@ -1,0 +1,13 @@
+.roster-reveal-card {
+  backface-visibility: hidden;
+  animation: roster-reveal-flip 620ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes roster-reveal-flip {
+  from { opacity: 0; transform: perspective(650px) rotateY(88deg) scale(.94); }
+  to { opacity: 1; transform: perspective(650px) rotateY(0deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roster-reveal-card { animation: none; }
+}
