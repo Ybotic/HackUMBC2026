@@ -264,8 +264,6 @@ export default function BattlePlayPage() {
   const opponentMaxHealth = isPlayer1
     ? battle.gameState.player2MaxHealth
     : battle.gameState.player1MaxHealth;
-  const yourType = getNFTTypeName(yours.stats.nftType);
-  const opponentType = getNFTTypeName(theirs.stats.nftType);
   const rosterBattle = !!battle.player1Roster && !!battle.player2Roster;
   const yourRoster = (isPlayer1
     ? battle.player1Roster
@@ -474,23 +472,7 @@ export default function BattlePlayPage() {
         aria-label={`${yourName} versus ${opponentName} live NFT battle`}
       >
         <BattleField
-          turn={displayTurn}
           handCount={yourLineup.length}
-          playerName={yourName}
-          opponentName={opponentName}
-          playerSubtitle={`${yourType.toUpperCase()} · ${yourHealth}/${yourMaxHealth} HP`}
-          opponentSubtitle={`${opponentType.toUpperCase()} · ${opponentHealth}/${opponentMaxHealth} HP`}
-          turnLabel={
-            finished
-              ? 'MATCH COMPLETE'
-              : yourTurn
-                ? priorityBattle
-                  ? 'CHOOSE ACTION'
-                  : 'YOUR TURN'
-                : priorityBattle
-                  ? 'WAITING FOR RIVAL'
-                  : "OPPONENT'S TURN"
-          }
           matchLabel={`MINT ARENA · ${priorityBattle ? 'ROUND' : 'TURN'} ${battle.gameState.turnNumber}`}
           showStacks={false}
           showPrizes={false}

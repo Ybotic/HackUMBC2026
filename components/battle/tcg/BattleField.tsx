@@ -1,5 +1,3 @@
-import { Icon } from './Icon';
-
 function CardBack({ className = '' }: { className?: string }) {
   return (
     <span className={`card-back ${className}`} aria-hidden="true">
@@ -68,14 +66,8 @@ export default function BattleField({
   playerDiscardCount = 0,
   playerPrizes = 0,
   opponentPrizes = 0,
-  turn,
   handCount = 0,
   opponentHandCount = 0,
-  playerName = 'YOU',
-  opponentName = 'RIVAL',
-  playerSubtitle = 'MINT ARENA',
-  opponentSubtitle = 'MINT ARENA',
-  turnLabel,
   matchLabel = 'MINT ARENA · NFT DUEL',
   showStacks = true,
   showPrizes = true,
@@ -86,14 +78,8 @@ export default function BattleField({
   playerDiscardCount?: number;
   playerPrizes?: number;
   opponentPrizes?: number;
-  turn: 'player' | 'opponent';
   handCount?: number;
   opponentHandCount?: number;
-  playerName?: string;
-  opponentName?: string;
-  playerSubtitle?: string;
-  opponentSubtitle?: string;
-  turnLabel?: string;
   matchLabel?: string;
   showStacks?: boolean;
   showPrizes?: boolean;
@@ -139,34 +125,6 @@ export default function BattleField({
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="opponent-banner">
-        <span className="avatar avatar-opponent">
-          {opponentName.charAt(0).toUpperCase()}
-        </span>
-        <span className="banner-copy">
-          <b>{opponentName}</b>
-          <small>{opponentSubtitle}</small>
-        </span>
-        <span className="connection-pill">
-          <i /> ONLINE
-        </span>
-      </div>
-      <div className="player-banner">
-        <span className="avatar avatar-player">
-          {playerName.charAt(0).toUpperCase()}
-        </span>
-        <span className="banner-copy">
-          <b>{playerName}</b>
-          <small>{playerSubtitle}</small>
-        </span>
-        <span
-          className={`turn-you ${turn === 'opponent' ? 'turn-opponent' : ''}`}
-        >
-          <Icon name="spark" size={13} />{' '}
-          {turnLabel ?? (turn === 'opponent' ? "OPPONENT'S TURN" : 'YOUR TURN')}
-        </span>
       </div>
 
       {showOpponentHand ? (
