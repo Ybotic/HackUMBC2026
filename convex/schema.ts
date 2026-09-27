@@ -1,6 +1,27 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
+const elementalTypeSchema = v.union(
+  v.literal(0),
+  v.literal(1),
+  v.literal(2),
+  v.literal(3),
+  v.literal(4),
+  v.literal(5),
+  v.literal(6),
+  v.literal(7),
+  v.literal(8),
+  v.literal(9),
+  v.literal(10),
+  v.literal(11),
+  v.literal(12),
+  v.literal(13),
+  v.literal(14),
+  v.literal(15),
+  v.literal(16),
+  v.literal(17),
+);
+
 export const nftStatsSchema = v.object({
   attack: v.number(),
   defense: v.number(),
@@ -8,7 +29,7 @@ export const nftStatsSchema = v.object({
   luck: v.number(),
   speed: v.number(),
   strength: v.number(),
-  nftType: v.number(), // 0 = fire, 1 = water, 2 = grass
+  nftType: elementalTypeSchema,
   maxHealth: v.number(),
   generatedAt: v.number(),
 });
@@ -21,7 +42,7 @@ export const nftMoveSchema = v.object({
   kind: v.optional(
     v.union(v.literal('attack'), v.literal('protect'), v.literal('switchout')),
   ),
-  element: v.optional(v.union(v.literal(0), v.literal(1), v.literal(2))),
+  element: v.optional(elementalTypeSchema),
 });
 
 export const battleNFTReferenceSchema = v.object({
@@ -214,9 +235,7 @@ export default defineSchema({
         ),
         cardIndex: v.optional(v.number()),
         targetIndex: v.optional(v.number()),
-        moveElement: v.optional(
-          v.union(v.literal(0), v.literal(1), v.literal(2)),
-        ),
+        moveElement: v.optional(elementalTypeSchema),
         effectiveness: v.optional(v.number()),
         protectSuccess: v.optional(v.boolean()),
         blocked: v.optional(v.boolean()),

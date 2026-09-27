@@ -1,4 +1,5 @@
 import { Package, Gift, Sparkles, Star, Crown } from 'lucide-react';
+import { BATTLE_TYPES } from '../battle-utils';
 
 export const TIER_PRICES = {
   common: 10, // 2 wins
@@ -64,12 +65,27 @@ export const MYSTERY_BOX_TIERS = {
   },
 } as const;
 
-export const NFT_TYPES = ['Fire', 'Water', 'Grass'] as const;
+export const NFT_TYPES = BATTLE_TYPES;
 
 export const NFT_TYPE_COLORS = {
   0: 'bg-red-500',
   1: 'bg-blue-500',
   2: 'bg-primary',
+  3: 'bg-stone-500',
+  4: 'bg-yellow-400',
+  5: 'bg-cyan-300',
+  6: 'bg-orange-700',
+  7: 'bg-purple-600',
+  8: 'bg-amber-700',
+  9: 'bg-sky-400',
+  10: 'bg-pink-500',
+  11: 'bg-lime-600',
+  12: 'bg-yellow-700',
+  13: 'bg-indigo-700',
+  14: 'bg-indigo-500',
+  15: 'bg-gray-800',
+  16: 'bg-slate-400',
+  17: 'bg-pink-300',
 } as const;
 
 export const generateId = (prefix: string) =>

@@ -8,6 +8,7 @@ import {
   generateId,
 } from '../lib/constants/marketplace';
 import { nftStatsSchema, tierSchema } from './schema';
+import { BATTLE_TYPES, type ElementalType } from '../lib/battle-utils';
 
 const validateUserAndCredits = async (
   ctx: any,
@@ -245,7 +246,7 @@ export const openMysteryBox = mutation({
       luck: Math.floor(Math.random() * 50) + 25,
       speed: Math.floor(Math.random() * 50) + 25,
       strength: Math.floor(Math.random() * 50) + 25,
-      nftType: Math.floor(Math.random() * 3),
+      nftType: Math.floor(Math.random() * BATTLE_TYPES.length) as ElementalType,
     };
 
     const luckMultiplier = 1 + Math.random() * 0.5; // 1.0 to 1.5x

@@ -9,10 +9,12 @@ import { v } from 'convex/values';
 import { getUserId } from './users';
 import { nftMoveSchema } from './schema';
 import {
+  BATTLE_TYPES,
   getFallbackMoves,
   getNFTTypeName,
   isElementalType,
   hasTypedMoves,
+  type ElementalType,
 } from '../lib/battle-utils';
 
 function generateNFTStats(collectionId: string, itemId: string, metadata: any) {
@@ -37,7 +39,7 @@ function generateNFTStats(collectionId: string, itemId: string, metadata: any) {
     luck: rand(5, 50, hashValue + 5),
     speed: rand(10, 70, hashValue + 6),
     strength: rand(20, 80, hashValue + 7),
-    nftType: Math.abs(hashValue) % 3,
+    nftType: (Math.abs(hashValue) % BATTLE_TYPES.length) as ElementalType,
     maxHealth: 0,
     generatedAt: Date.now(),
   };
@@ -383,7 +385,7 @@ export const generateAIMove = internalAction({
           ...attacks.map((move) => ({
             ...move,
             kind: 'attack' as const,
-            element: args.nftType as 0 | 1 | 2,
+            element: args.nftType as ElementalType,
           })),
           utility,
         ];
