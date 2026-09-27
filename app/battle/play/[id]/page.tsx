@@ -191,8 +191,9 @@ export default function BattlePlayPage() {
             </Link>
             <h1
               style={{
-                font: '42px var(--font-garamond), Georgia, serif',
                 marginTop: 8,
+                fontSize: 42,
+                fontWeight: 700,
               }}
             >
               The battle table
@@ -226,9 +227,7 @@ export default function BattlePlayPage() {
             {finished && (
               <section className="mint-result" role="status">
                 <span className="mint-overline">FINAL RESULT</span>
-                <h2
-                  style={{ font: '40px var(--font-garamond), Georgia, serif' }}
-                >
+                <h2 style={{ fontSize: 40, fontWeight: 700 }}>
                   {battle.gameState.winner === selectedAccount.address
                     ? 'Victory.'
                     : 'Defeat.'}

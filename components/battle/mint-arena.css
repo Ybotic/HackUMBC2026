@@ -1,7 +1,7 @@
-.mint-page { min-height: 100vh; background: #080e18; color: #f3f5ff; padding: 24px clamp(16px, 4vw, 72px) 72px; }
+.mint-page { min-height: 100vh; background: #000000; background-image: none; color: #f3f5ff; font-family: inherit; padding: 24px clamp(16px, 4vw, 72px) 72px; }
 .mint-shell { max-width: 1500px; margin: 0 auto; }
 .mint-overline { color: #79bdff; letter-spacing: .22em; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-.mint-heading { font-family: var(--font-garamond), Georgia, serif; font-size: clamp(3rem, 6vw, 6rem); line-height: .92; letter-spacing: -.04em; }
+.mint-heading { font-size: clamp(2rem, 3vw, 2.25rem); font-weight: 700; line-height: 1.2; letter-spacing: -.025em; }
 .mint-muted { color: #aebbd0; }
 .mint-panel { background: #111a2a; border: 1px solid #29486b; border-radius: 20px; padding: clamp(18px, 2vw, 28px); }
 .mint-button { border: 1px solid #62b3ff; border-radius: 10px; background: #0086F0; color: #ffffff; padding: 12px 20px; font-weight: 800; display: inline-flex; gap: 10px; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: transform .2s, background .2s; }
@@ -27,16 +27,140 @@
 .mint-card-art { flex: 1; min-height: 96px; display: block; overflow: hidden; border: 1px solid #ffffff8c; border-radius: 3px; background: radial-gradient(circle at 50% 35%, #3b8ed4, #13223a); }
 .mint-card-art img { display: block; width: 100%; height: 100%; min-height: 96px; max-height: 120px; object-fit: cover; }
 .mint-card-fallback { height: 100%; min-height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #d9eaff; font-size: 8px; letter-spacing: .1em; }
-.mint-card-name { font-family: var(--font-garamond), Georgia, serif; font-size: 19px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mint-card-name { font-size: 15px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mint-empty-card { width: 184px; min-height: 240px; border: 1px dashed #6dbbff; border-radius: 10px; background: #10213aa8; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 12px; }
 .mint-empty-card > span { color: #FC1F77; font-size: 38px; }.mint-empty-card strong { font-size: 10px; letter-spacing: .1em; }.mint-empty-card small { color: #c3d7f0; line-height: 1.4; }
 .mint-health { width: min(100%, 280px); }.mint-health-label { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; letter-spacing: .07em; }.mint-health-label small { font-size: 9px; color: #c3d7f0; }.mint-health-track { height: 7px; margin-top: 4px; border: 1px solid #397bb9; background: #07101f; border-radius: 8px; overflow: hidden; }.mint-health-track span { display: block; height: 100%; background: linear-gradient(90deg,#0086F0,#FC1F77); transition: width .5s ease; }
 .mint-arena-divider { display: flex; width: min(100%, 420px); align-items: center; gap: 12px; color: #f5e4ef; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-align: center; z-index: 1; }.mint-arena-divider i { flex: 1; height: 1px; background: #FC1F77; }
 .mint-arena-compact { min-height: 620px; }.mint-arena-compact .mint-card, .mint-arena-compact .mint-empty-card { width: 160px; min-height: 208px; }
-.mint-inspect-backdrop { position: fixed; inset: 0; z-index: 100; background: #070d18c9; display: grid; place-items: center; padding: 20px; }.mint-inspect-overlay { position: absolute; inset: 0; border: 0; background: transparent; cursor: pointer; }.mint-inspect { position: relative; width: min(100%, 400px); padding: 32px; background: #121f36; border: 1px solid #FC1F77; border-radius: 18px; box-shadow: 0 20px 60px #000b; }.mint-inspect h2 { font: 42px var(--font-garamond), Georgia, serif; }.mint-inspect p { color: #d1dcf0; margin: 16px 0; }.mint-inspect-close { position: absolute; right: 14px; top: 14px; background: transparent; border: 0; color: white; cursor: pointer; }
+.mint-inspect-backdrop { position: fixed; inset: 0; z-index: 100; background: #070d18c9; display: grid; place-items: center; padding: 20px; }.mint-inspect-overlay { position: absolute; inset: 0; border: 0; background: transparent; cursor: pointer; }.mint-inspect { position: relative; width: min(100%, 400px); padding: 32px; background: #121f36; border: 1px solid #FC1F77; border-radius: 18px; box-shadow: 0 20px 60px #000b; }.mint-inspect h2 { font-size: 2rem; font-weight: 700; line-height: 1.2; }.mint-inspect p { color: #d1dcf0; margin: 16px 0; }.mint-inspect-close { position: absolute; right: 14px; top: 14px; background: transparent; border: 0; color: white; cursor: pointer; }
 .mint-impact .mint-card { animation: mint-hit .55s ease-out; }@keyframes mint-hit { 0%,100% { filter: brightness(1); transform: translateX(0); } 35% { filter: brightness(2); transform: translateX(8px) rotate(3deg); } 65% { transform: translateX(-5px); } }
 .mint-hub-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, .8fr); gap: 24px; align-items: start; }.mint-side { display: grid; gap: 18px; }.mint-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }.mint-list { display: grid; gap: 10px; max-height: 330px; overflow-y: auto; }.mint-list-item { padding: 12px; border: 1px solid #29486b; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #14213a; }.mint-list-item small { color: #b8cbe5; display: block; margin-top: 4px; }.mint-input { width: 100%; border: 1px solid #4279ae; border-radius: 10px; padding: 12px; background: #0a1425; color: white; }
 .mint-play-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 370px); gap: 20px; align-items: start; }.mint-play-sidebar { display: grid; gap: 16px; }.mint-moves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }.mint-move { display: grid; gap: 5px; padding: 12px; border: 1px solid #397bb9; background: #172a48; border-radius: 12px; color: #f0f6eb; text-align: left; cursor: pointer; }.mint-move[aria-pressed='true'] { border-color: #FC1F77; background: #283354; box-shadow: 0 0 0 2px #FC1F7740; }.mint-move:disabled { opacity: .6; cursor: not-allowed; }.mint-move small { color: #bad0ef; }.mint-log { max-height: 270px; overflow: auto; }.mint-log-entry { border-left: 2px solid #FC1F77; padding: 6px 12px; margin: 8px 0; color: #d9e4f5; }.mint-log-entry small { color: #aec5e5; display: block; }.mint-result { padding: 20px; border: 1px solid #FC1F77; background: #242541; border-radius: 12px; }
 @media (max-width: 900px) { .mint-hub-layout, .mint-play-grid { grid-template-columns: 1fr; }.mint-side { grid-template-columns: repeat(2,minmax(0,1fr)); }.mint-side > :first-child { grid-column: 1 / -1; } }
 @media (max-width: 600px) { .mint-side { grid-template-columns: 1fr; }.mint-side > :first-child { grid-column: auto; }.mint-arena { min-height: 630px; padding: 14px; }.mint-arena .mint-card, .mint-arena .mint-empty-card { width: 160px; min-height: 208px; }.mint-arena-compact { min-height: 600px; }.mint-list-item { flex-wrap: wrap; }.mint-moves { grid-template-columns: 1fr; }.mint-page { padding-top: 16px; } }
 @media (prefers-reduced-motion: reduce) { .mint-card, .mint-button, .mint-health-track span { transition: none; }.mint-impact .mint-card { animation: none; } }
+
+/* Keep the dashboard-style battle hub calm while retaining the card-table feel. */
+.mint-arena-compact {
+  color: var(--foreground);
+  border-color: var(--border);
+  border-radius: var(--radius-xl);
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    color-mix(in srgb, var(--primary) 9%, var(--card)),
+    var(--card) 52%,
+    var(--background) 100%
+  );
+  box-shadow: inset 0 1px 0 #ffffff08;
+}
+
+.mint-arena-compact::before {
+  inset: 8%;
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 24px;
+}
+
+.mint-arena-compact .mint-arena-grid {
+  opacity: 0.12;
+  background-image:
+    linear-gradient(#ffffff0b 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff0b 1px, transparent 1px);
+}
+
+.mint-arena-compact .mint-arena-center {
+  color: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.mint-arena-compact .mint-arena-top,
+.mint-arena-compact .mint-arena-bottom,
+.mint-arena-compact .mint-fighter-tag {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-card {
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--primary) 9%, var(--card)),
+    var(--card) 68%
+  );
+  box-shadow: 0 12px 28px #0005, inset 0 1px 0 #ffffff0a;
+}
+
+.mint-arena-compact .mint-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px #0006, inset 0 1px 0 #ffffff0a;
+}
+
+.mint-arena-compact .mint-card-top,
+.mint-arena-compact .mint-card-foot {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-card-foot {
+  border-color: var(--border);
+}
+
+.mint-arena-compact .mint-card-art {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+}
+
+.mint-arena-compact .mint-card-art img {
+  border-radius: var(--radius-sm);
+}
+
+.mint-arena-compact .mint-card-fallback,
+.mint-arena-compact .mint-empty-card > span {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-empty-card {
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+.mint-arena-compact .mint-empty-card small {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-health-label {
+  color: var(--foreground);
+}
+
+.mint-arena-compact .mint-health-label small {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-health-track {
+  border-color: var(--border);
+  background: var(--muted);
+}
+
+.mint-arena-compact .mint-health-track span {
+  background: var(--primary);
+}
+
+.mint-arena-compact .mint-arena-divider {
+  color: var(--muted-foreground);
+}
+
+.mint-arena-compact .mint-arena-divider i {
+  background: var(--border);
+}
+
+.mint-arena-compact .mint-inspect {
+  color: var(--foreground);
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.mint-arena-compact .mint-inspect p,
+.mint-arena-compact .mint-inspect-close {
+  color: var(--muted-foreground);
+}
