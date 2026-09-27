@@ -372,6 +372,12 @@ export default defineSchema({
 
     purchasedAt: v.number(),
     openedAt: v.optional(v.number()),
+
+    // Guards against minting the same generated NFT more than once
+    mintStatus: v.optional(v.union(v.literal('minting'), v.literal('minted'))),
+    mintStartedAt: v.optional(v.number()),
+    mintedAt: v.optional(v.number()),
+    mintedItemId: v.optional(v.string()),
   })
     .index('by_purchaser', ['purchaserAddress'])
     .index('by_status', ['status'])

@@ -5,6 +5,7 @@ import { getUserId } from './users';
 import {
   TIER_PRICES,
   TIER_MULTIPLIERS,
+  MINT_CLAIM_TTL_MS,
   generateId,
 } from '../lib/constants/marketplace';
 import { nftStatsSchema, tierSchema } from './schema';
@@ -369,12 +370,86 @@ export const updateMysteryBoxImage = mutation({
     const box = await ctx.db.get(args.boxId);
     if (!box) throw new Error('Mystery box not found');
     if (!box.generatedNFT) throw new Error('No generated NFT found');
+    if (box.mintStatus) throw new Error('NFT has already been minted');
 
     await ctx.db.patch(args.boxId, {
       generatedNFT: {
         ...box.generatedNFT,
         imageUrl: args.imageUrl,
       },
+    });
+
+    return { success: true };
+  },
+});
+
+export const claimMysteryBoxMint = mutation({
+  args: {
+    boxId: v.id('mysteryBoxes'),
+    purchaserAddress: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const box = await ctx.db.get(args.boxId);
+    if (!box) throw new Error('Mystery box not found');
+    if (box.purchaserAddress !== args.purchaserAddress)
+      throw new Error('Not your mystery box');
+    if (box.status !== 'opened' || !box.generatedNFT?.imageUrl)
+      throw new Error('NFT is not ready to mint');
+    if (box.mintStatus === 'minted')
+      throw new Error('NFT has already been minted');
+    if (
+      box.mintStatus === 'minting' &&
+      Date.now() - (box.mintStartedAt ?? 0) < MINT_CLAIM_TTL_MS
+    )
+      throw new Error('NFT is already being minted');
+
+    await ctx.db.patch(args.boxId, {
+      mintStatus: 'minting',
+      mintStartedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const completeMysteryBoxMint = mutation({
+  args: {
+    boxId: v.id('mysteryBoxes'),
+    purchaserAddress: v.string(),
+    itemId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const box = await ctx.db.get(args.boxId);
+    if (!box) throw new Error('Mystery box not found');
+    if (box.purchaserAddress !== args.purchaserAddress)
+      throw new Error('Not your mystery box');
+    if (box.mintStatus === 'minted') return { success: true };
+
+    await ctx.db.patch(args.boxId, {
+      mintStatus: 'minted',
+      mintedAt: Date.now(),
+      mintedItemId: args.itemId,
+    });
+
+    return { success: true };
+  },
+});
+
+export const releaseMysteryBoxMint = mutation({
+  args: {
+    boxId: v.id('mysteryBoxes'),
+    purchaserAddress: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const box = await ctx.db.get(args.boxId);
+    if (!box) throw new Error('Mystery box not found');
+    if (box.purchaserAddress !== args.purchaserAddress)
+      throw new Error('Not your mystery box');
+    if (box.mintStatus !== 'minting') return { success: true };
+
+    await ctx.db.patch(args.boxId, {
+      mintStatus: undefined,
+      mintStartedAt: undefined,
     });
 
     return { success: true };

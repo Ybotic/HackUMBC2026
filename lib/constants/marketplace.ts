@@ -65,6 +65,10 @@ export const MYSTERY_BOX_TIERS = {
   },
 } as const;
 
+// A mint claim that never completes (e.g. the tab closed mid-mint) is
+// released after this long so the box is not locked forever.
+export const MINT_CLAIM_TTL_MS = 10 * 60 * 1000;
+
 export const NFT_TYPES = BATTLE_TYPES;
 
 export const NFT_TYPE_COLORS = {
