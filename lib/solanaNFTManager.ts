@@ -206,6 +206,16 @@ export class SolanaNFTManager {
     }
   }
 
+  private cacheCollectionAccounts(collections: CoreCollectionAccount[]): void {
+    const expiresAt = Date.now() + READ_CACHE_TTL_MS;
+    for (const collection of collections) {
+      this.collectionReadCache.set(collection.publicKey.toString(), {
+        expiresAt,
+        value: collection,
+      });
+    }
+  }
+
   private createUmiSigner(umi: ReturnType<typeof createUmi>): Signer {
     const walletSigner = this.walletSigner;
     if (!walletSigner)
@@ -362,13 +372,7 @@ export class SolanaNFTManager {
         })),
       );
 
-      const expiresAt = Date.now() + READ_CACHE_TTL_MS;
-      for (const collection of collections) {
-        this.collectionReadCache.set(collection.publicKey.toString(), {
-          expiresAt,
-          value: collection,
-        });
-      }
+      this.cacheCollectionAccounts(collections);
 
       return results;
     });
@@ -413,15 +417,39 @@ export class SolanaNFTManager {
         collection = cachedCollection.value;
       } else {
         if (cachedCollection) this.collectionReadCache.delete(collectionId);
-        collection = await withTimeout(
-          fetchCollection(umi, publicKey(collectionId)),
-          COLLECTION_FETCH_TIMEOUT_MS,
-          'The Solana RPC did not respond while loading this collection. Check your network and try again.',
+        const loadError =
+          'The Solana RPC did not respond while loading this collection. Check your network and try again.';
+
+        // Refresh using the same update-authority query as the collection
+        // picker. This avoids relying on a stale list selection followed by a
+        // separate, less reliable single-account lookup during minting.
+        const collections = await this.runRpcRead(() =>
+          withTimeout(
+            fetchCollectionsByUpdateAuthority(
+              umi,
+              publicKey(umi.identity.publicKey),
+            ),
+            COLLECTION_FETCH_TIMEOUT_MS,
+            loadError,
+          ),
         );
-        this.collectionReadCache.set(collectionId, {
-          expiresAt: Date.now() + READ_CACHE_TTL_MS,
-          value: collection,
-        });
+        this.cacheCollectionAccounts(collections);
+        collection = collections.find(
+          (candidate) => candidate.publicKey.toString() === collectionId,
+        );
+
+        // Keep support for a collection that was selected before a wallet or
+        // update-authority change, even if it is not in the refreshed list.
+        if (!collection) {
+          collection = await this.runRpcRead(() =>
+            withTimeout(
+              fetchCollection(umi, publicKey(collectionId)),
+              COLLECTION_FETCH_TIMEOUT_MS,
+              loadError,
+            ),
+          );
+          this.cacheCollectionAccounts([collection]);
+        }
       }
     }
     const result = await create(umi, {
