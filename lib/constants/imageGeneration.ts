@@ -1,1 +1,1 @@
-export const IMAGE_GENERATION_MODEL = 'meta/muse-image';
+export const IMAGE_GENERATION_MODEL = process.env.IMAGE_GENERATION_MODEL;
