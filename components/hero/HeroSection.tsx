@@ -7,9 +7,9 @@ import Floating, {
 } from '@/components/fancy/parallax-floating';
 import useScreenSize from '@/hooks/use-screen-size';
 
-const heroImages = [
-  7, 2, 10, 4, 1, 9, 5, 11, 3, 8, 6,
-].map((imageNumber) => `/hero-parallax/newimages/float${imageNumber}.png`);
+const heroImages = [7, 2, 10, 4, 1, 9, 5, 11, 3, 8, 6].map(
+  (imageNumber) => `/hero-parallax/float${imageNumber}.png`,
+);
 
 export default function HeroSection() {
   const [scope, animate] = useAnimate();

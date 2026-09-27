@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Link as TransitionLink } from 'next-view-transitions';
 import { useRef } from 'react';
 import ParticleRose from '@/components/hero/particle-rose';
-import newGengar from '@/newimages/newgengar.jpg';
 
 export default function FooterSection() {
   const artFadeRef = useRef(0);
@@ -15,7 +14,7 @@ export default function FooterSection() {
         <div className="w-full h-[30vh] min-h-48 flex items-center justify-center md:h-full md:w-1/2 md:justify-end md:pr-10 lg:pr-16">
           <ParticleRose
             artFadeRef={artFadeRef}
-            artUrl={newGengar.src}
+            artUrl="/hero-footer/newgengar.jpg"
             intro={false}
             mode="art"
             className="w-[min(72vw,24rem)] md:w-[min(40vw,35rem)]"
