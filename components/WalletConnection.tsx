@@ -51,6 +51,7 @@ export function WalletConnection() {
     api.users.getUser,
     selectedAccount?.address ? { address: selectedAccount.address } : 'skip',
   );
+  const credits = userData?.credits ?? 0;
 
   // Create user if not exists
   const createOrGetUser = useMutation(api.users.createOrGetUser);
@@ -123,10 +124,24 @@ export function WalletConnection() {
   }
 
   return (
-    <div>
+    <div className="flex items-center gap-2">
+      <div
+        role="status"
+        aria-label={`${credits} Shards`}
+        title={`${credits.toLocaleString()} Shards`}
+        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 text-xs font-semibold tabular-nums text-amber-700 dark:text-amber-300"
+      >
+        <Coins aria-hidden="true" className="h-3.5 w-3.5" />
+        <span>{credits.toLocaleString()}</span>
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            title={selectedAccount?.address}
+          >
             <div className="relative">
               <Avatar className="h-5 w-5">
                 <AvatarImage
@@ -137,19 +152,11 @@ export function WalletConnection() {
                   <User className="h-3 w-3" />
                 </AvatarFallback>
               </Avatar>
-              {userData?.credits && userData.credits > 0 && (
-                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center min-w-[12px] h-3 px-1">
-                  {userData.credits >= 1000
-                    ? `${Math.floor(userData.credits / 1000)}k`
-                    : userData.credits >= 100
-                      ? '99+'
-                      : userData.credits}
-                </div>
-              )}
             </div>
-            <span className="hidden sm:inline text-sm">
-              {selectedAccount?.meta.name ||
-                selectedAccount?.address.slice(0, 6)}
+            <span className="hidden sm:inline text-sm font-mono">
+              {selectedAccount?.address
+                ? `${selectedAccount.address.slice(0, 6)}...${selectedAccount.address.slice(-4)}`
+                : ''}
             </span>
             <ChevronDown className="h-4 w-4" />
           </Button>
@@ -179,26 +186,6 @@ export function WalletConnection() {
           </DropdownMenuLabel>
 
           <DropdownMenuSeparator />
-
-          <div className="p-3 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/20 dark:to-amber-950/20 rounded-md mx-2 mb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Coins className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Shards
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold text-yellow-700 dark:text-yellow-300">
-                  {userData?.credits || 0}
-                </span>
-                <Coins className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-              </div>
-            </div>
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-              Earn shards by winning battles!
-            </p>
-          </div>
 
           <div className="p-4 bg-muted/30 rounded-md">
             <div className="flex items-start gap-2">
