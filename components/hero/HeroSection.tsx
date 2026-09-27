@@ -6,12 +6,10 @@ import Floating, {
   FloatingElement,
 } from '@/components/fancy/parallax-floating';
 import useScreenSize from '@/hooks/use-screen-size';
-import Image from 'next/image';
 
-const heroImages = Array.from(
-  { length: 11 },
-  (_, i) => `/hero-parallax/newimages/float${i + 1}.png`,
-);
+const heroImages = [
+  7, 2, 10, 4, 1, 9, 5, 11, 3, 8, 6,
+].map((imageNumber) => `/hero-parallax/newimages/float${imageNumber}.png`);
 
 export default function HeroSection() {
   const [scope, animate] = useAnimate();
@@ -99,7 +97,7 @@ export default function HeroSection() {
         >
           <motion.img
             initial={{ opacity: 0 }}
-            src="/hero-parallax/newimages/FinalGengarAscii.png"
+            src={heroImages[2]}
             className="w-24 sm:w-40 md:w-52 aspect-[3/4] object-cover hover:scale-105 duration-200 cursor-pointer transition-transform rounded-sm"
             alt="NFT artwork"
           />
@@ -181,6 +179,14 @@ export default function HeroSection() {
             src={heroImages[10]}
             className="w-16 sm:w-28 md:w-36 aspect-square object-cover hover:scale-105 duration-200 cursor-pointer transition-transform rounded-sm"
             alt="NFT artwork"
+          />
+        </FloatingElement>
+        <FloatingElement depth={4} className="top-[83%] left-[64%]">
+          <motion.img
+            initial={{ opacity: 0 }}
+            src="/hero-parallax/newimages/FinalGengarAscii.png"
+            className="w-20 sm:w-28 md:w-36 aspect-[4/3] object-contain hover:scale-105 duration-200 cursor-pointer transition-transform rounded-sm"
+            alt="Gengar ASCII artwork"
           />
         </FloatingElement>
       </Floating>
