@@ -34,25 +34,25 @@ export default function FooterSection() {
           <div className="grid grid-cols-2 md:flex md:flex-wrap justify-center gap-4 sm:gap-6 md:gap-12 lg:gap-16 text-white mb-6 sm:mb-8 md:mb-12 w-full max-w-lg md:max-w-none">
             <Link
               href="/"
-              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0089EE] transition-all duration-300 hover:scale-110 text-center"
+              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Home
             </Link>
             <Link
               href="/dashboard"
-              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0089EE] transition-all duration-300 hover:scale-110 text-center"
+              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Dashboard
             </Link>
             <Link
               href="/generate"
-              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0089EE] transition-all duration-300 hover:scale-110 text-center"
+              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Generate
             </Link>
             <Link
               href="/battle"
-              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0089EE] transition-all duration-300 hover:scale-110 text-center"
+              className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Battle
             </Link>
