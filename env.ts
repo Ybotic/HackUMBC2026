@@ -13,7 +13,12 @@ export const env = createEnv({
     CONVEX_DEPLOYMENT: optionalEnvString,
     // necessary only for prod on vercel
     CONVEX_DEPLOY_KEY: optionalEnvString,
-    // Optional for local development; upload routes return 503 until configured.
+    // Set automatically when a Vercel Blob store is connected to this project.
+    BLOB_STORE_ID: optionalEnvString,
+    // Optional custom variable names for the Mint Blob store configuration.
+    MINT_STORE_ID: optionalEnvString,
+    MINT_READ_WRITE_TOKEN: optionalEnvString,
+    // Fallback for non-Vercel runtimes (including the Convex image generation action).
     BLOB_READ_WRITE_TOKEN: optionalEnvString,
   },
   client: {
@@ -35,6 +40,9 @@ export const env = createEnv({
     NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
     NEXT_PUBLIC_SOLANA_RPC_URL: process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,
+    BLOB_STORE_ID: process.env.BLOB_STORE_ID,
+    MINT_STORE_ID: process.env.MINT_STORE_ID,
+    MINT_READ_WRITE_TOKEN: process.env.MINT_READ_WRITE_TOKEN,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
   },
 });

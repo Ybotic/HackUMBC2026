@@ -41,15 +41,20 @@ PINATA_JWT=
 NEXT_PUBLIC_GATEWAY_URL=
 ```
 
-`BLOB_READ_WRITE_TOKEN` is optional for local startup. Configure it when you
-want profile-picture uploads or Convex-hosted image generation; uploads remain
-disabled until the token is available.
+Connect a Vercel Blob store to the Vercel project for profile-picture uploads.
+The Vercel-hosted Next.js route uses the SDK's OIDC authentication automatically
+(`VERCEL_OIDC_TOKEN` paired with `BLOB_STORE_ID`) unless
+`MINT_READ_WRITE_TOKEN` is configured. `MINT_STORE_ID` can be used when the
+store ID is configured under a custom name. For local development, link the
+Vercel project and run `vercel env pull` to get the development OIDC
+configuration.
 
 Configure `OPENROUTER_API_KEY` in the Convex deployment environment for card-art
 generation (`google/gemini-3.1-flash-image`) and AI-generated battle moves.
 Mystery-box character descriptions still use the Google AI SDK, so configure
-`GOOGLE_GENERATIVE_AI_API_KEY` in Convex as well. Convex-hosted image generation
-also needs `BLOB_READ_WRITE_TOKEN` in the Convex environment to store the result.
+`GOOGLE_GENERATIVE_AI_API_KEY` in Convex as well. The image-generation action
+runs on Convex rather than Vercel, so it does not receive Vercel's OIDC token;
+configure `MINT_READ_WRITE_TOKEN` in the Convex environment for that upload.
 
 Use a DAS-capable production RPC if the collection grows large. The current
 implementation uses Metaplex Core GPA queries so it also works with standard

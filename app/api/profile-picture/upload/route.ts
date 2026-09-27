@@ -3,7 +3,14 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { env } from '@/env';
 
 export async function POST(request: NextRequest) {
-  if (!env.BLOB_READ_WRITE_TOKEN) {
+  const hasBlobCredentials = Boolean(
+    env.MINT_READ_WRITE_TOKEN ||
+      env.BLOB_STORE_ID ||
+      env.MINT_STORE_ID ||
+      env.BLOB_READ_WRITE_TOKEN,
+  );
+
+  if (!hasBlobCredentials) {
     return NextResponse.json(
       { error: 'Profile picture uploads are not configured yet.' },
       { status: 503 },
@@ -41,6 +48,10 @@ export async function POST(request: NextRequest) {
 
     const blob = await put(filename, file, {
       access: 'public',
+      ...(env.MINT_READ_WRITE_TOKEN
+        ? { token: env.MINT_READ_WRITE_TOKEN }
+        : {}),
+      ...(env.MINT_STORE_ID ? { storeId: env.MINT_STORE_ID } : {}),
     });
 
     return NextResponse.json({

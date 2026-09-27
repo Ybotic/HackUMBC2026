@@ -92,16 +92,19 @@ export function ImageGenerator() {
     if (!generatedImage.url || !selectedAccount) return;
 
     setIsMinting(true);
-    const result = await mintImageAsNFT({
-      nftManager,
-      selectedAccount,
-      selectedCollectionId,
-      newCollectionName,
-      imageUrl: generatedImage.url,
-      nftName,
-    });
-
-    setIsMinting(false);
+    let result: Awaited<ReturnType<typeof mintImageAsNFT>>;
+    try {
+      result = await mintImageAsNFT({
+        nftManager,
+        selectedAccount,
+        selectedCollectionId,
+        newCollectionName,
+        imageUrl: generatedImage.url,
+        nftName,
+      });
+    } finally {
+      setIsMinting(false);
+    }
 
     if (result) {
       setShowSuccessAnimation(true);
@@ -177,12 +180,9 @@ export function ImageGenerator() {
     <div className="p-2">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">
-            AI NFT Generator
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">NFT Generator</h1>
           <p className="text-lg text-muted-foreground mx-auto">
-            Create stunning AI-generated artwork and mint it directly as NFTs on
-            Solana
+            Create stunning artwork and mint it directly as NFTs on Solana
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export function ImageGenerator() {
             <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-muted-foreground/40 transition-colors duration-300 backdrop-blur-sm bg-card/80">
               <CardHeader className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-green-500 p-2 rounded-lg">
+                  <div className="bg-primary p-2 rounded-lg">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -245,14 +245,15 @@ export function ImageGenerator() {
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input
+                              <textarea
+                                rows={10}
                                 placeholder="A majestic dragon soaring through clouds at sunset, vibrant colors..."
-                                className="h-12 lg:h-16 text-base lg:text-lg px-4 lg:px-6 py-3 lg:py-4 rounded-xl border-2 focus:border-primary transition-all duration-300 placeholder:text-muted-foreground/60 placeholder:opacity-75"
+                                className="min-h-[18rem] lg:min-h-[24rem] w-full resize-y rounded-xl border-2 border-input bg-transparent px-4 lg:px-6 py-3 lg:py-4 text-base lg:text-lg shadow-xs outline-none transition-all duration-300 placeholder:text-muted-foreground/60 placeholder:opacity-75 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50"
                                 {...field}
                               />
                             </div>
                           </FormControl>
-                          <FormDescription className="text-sm lg:text-base bg-muted/50 p-3 lg:p-4 rounded-lg border-l-4 border-green-500">
+                          <FormDescription className="text-sm lg:text-base bg-muted/50 p-3 lg:p-4 rounded-lg border-l-4 border-primary">
                             💡 <strong>Pro tip:</strong> Be detailed and
                             specific for the best results.
                           </FormDescription>
@@ -265,7 +266,7 @@ export function ImageGenerator() {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full h-12 lg:h-14 text-base lg:text-lg font-semibold rounded-lg bg-green-500 hover:bg-green-600 transition-all duration-300 transform hover:scale-[1.02] disabled:scale-100 shadow-lg hover:shadow-xl"
+                      className="w-full h-12 lg:h-14 text-base lg:text-lg font-semibold rounded-lg bg-primary hover:bg-primary/90 transition-all duration-300 transform hover:scale-[1.02] disabled:scale-100 shadow-lg hover:shadow-xl"
                     >
                       {isLoading ? (
                         <>
@@ -322,7 +323,7 @@ export function ImageGenerator() {
           </div>
 
           <div className="lg:order-2 lg:sticky lg:top-8">
-            <Card className="w-full max-w-[512px] aspect-square mx-auto flex flex-col border-2 backdrop-blur-sm bg-card/80">
+            <Card className="w-full max-w-[512px] aspect-[5/7] mx-auto flex flex-col border-2 backdrop-blur-sm bg-card/80">
               <CardHeader className="w-full border-b">
                 <CardTitle className="text-center text-lg lg:text-xl flex items-center justify-center space-x-2">
                   <svg
@@ -345,10 +346,10 @@ export function ImageGenerator() {
               </CardHeader>
               <CardContent className="flex items-center justify-center flex-grow p-4 overflow-hidden">
                 {showSuccessAnimation && (
-                  <div className="flex flex-col items-center text-green-600 animate-in fade-in-0 duration-300">
+                  <div className="flex flex-col items-center text-primary animate-in fade-in-0 duration-300">
                     <div className="relative mb-4">
                       <svg
-                        className="h-12 w-12 text-green-500"
+                        className="h-12 w-12 text-primary"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -373,9 +374,9 @@ export function ImageGenerator() {
                 {isLoading && !showSuccessAnimation && (
                   <div className="flex flex-col items-center text-muted-foreground">
                     <div className="relative mb-6">
-                      <div className="absolute inset-0 bg-green-400 rounded-full blur-md opacity-15 animate-pulse" />
+                      <div className="absolute inset-0 bg-primary rounded-full blur-md opacity-15 animate-pulse" />
                       <svg
-                        className="relative animate-spin h-16 w-16 text-green-500"
+                        className="relative animate-spin h-16 w-16 text-primary"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -405,12 +406,12 @@ export function ImageGenerator() {
                 )}
                 {!isLoading && !showSuccessAnimation && generatedImage.url && (
                   <div className="relative group">
-                    <div className="absolute inset-0 bg-green-400 rounded-2xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-primary rounded-2xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity duration-300" />
                     <Image
                       src={generatedImage.url}
                       alt="Generated image"
                       width={1024}
-                      height={1024}
+                      height={1434}
                       className="relative rounded-2xl object-contain w-full h-full shadow-2xl"
                       priority
                     />
@@ -483,7 +484,7 @@ export function ImageGenerator() {
                     </Button>
                   </div>
                   <div className="w-full space-y-2">
-                    <div className="flex items-center space-x-2 text-sm font-medium text-green-600">
+                    <div className="flex items-center space-x-2 text-sm font-medium text-primary">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
@@ -547,7 +548,7 @@ export function ImageGenerator() {
                         (!selectedCollectionId && !newCollectionName.trim()) ||
                         !nftName.trim()
                       }
-                      className="w-full h-10 rounded-xl bg-green-500 hover:bg-green-600 transition-all duration-300"
+                      className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 transition-all duration-300"
                     >
                       {isMinting ? (
                         <>

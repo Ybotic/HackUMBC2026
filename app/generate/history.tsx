@@ -110,7 +110,7 @@ export function ImageHistory() {
                 <Skeleton className="h-4 w-1/2" />
               </CardHeader>
               <CardContent className="p-4 pt-2 flex-grow">
-                <Skeleton className="w-full aspect-square rounded-lg" />
+                <Skeleton className="w-full aspect-[5/7] rounded-lg" />
               </CardContent>
               <CardFooter className="p-4 pt-2 flex justify-center gap-3">
                 <Skeleton className="h-9 flex-1" />
@@ -216,7 +216,7 @@ function ImageCard({ image }: { image: ImageGen }) {
   return (
     <>
       <div className="group relative bg-card rounded-xl overflow-hidden border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300 ease-out">
-        <div className="relative w-full aspect-square bg-muted/10 p-3">
+        <div className="relative w-full aspect-[5/7] bg-muted/10 p-3">
           <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted/20 ring-1 ring-border/50">
             {image.status === 'completed' && image.imageUrl ? (
               <Tooltip>
@@ -397,16 +397,20 @@ function MintDialog({
     if (!selectedAccount) return;
 
     setMinting(true);
-    const result = await mintImageAsNFT({
-      nftManager,
-      selectedAccount,
-      selectedCollectionId: selectedCollection,
-      newCollectionName,
-      imageUrl,
-      nftName,
-    });
+    let result: Awaited<ReturnType<typeof mintImageAsNFT>>;
+    try {
+      result = await mintImageAsNFT({
+        nftManager,
+        selectedAccount,
+        selectedCollectionId: selectedCollection,
+        newCollectionName,
+        imageUrl,
+        nftName,
+      });
+    } finally {
+      setMinting(false);
+    }
 
-    setMinting(false);
     if (result) setOpen(false);
   };
 
@@ -421,7 +425,7 @@ function MintDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-6">
-          <div className="relative w-full max-w-sm mx-auto aspect-square rounded-xl overflow-hidden bg-muted/20 ring-1 ring-border/50">
+          <div className="relative w-full max-w-sm mx-auto aspect-[5/7] rounded-xl overflow-hidden bg-muted/20 ring-1 ring-border/50">
             <Image
               src={imageUrl}
               alt="Image to mint"
@@ -493,7 +497,7 @@ function MintDialog({
           )}
 
           <Input
-            placeholder="NFT Name (e.g., 'My Amazing AI Art')"
+            placeholder="NFT Name (e.g., 'My Amazing Artwork')"
             value={nftName}
             onChange={(e) => setNftName(e.target.value)}
             className="h-12"
