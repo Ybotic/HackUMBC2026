@@ -30,19 +30,27 @@ const NavLink = ({
   active?: boolean;
   onClick?: () => void;
   className?: string;
-}) => (
-  <Link
-    href={href}
-    onClick={onClick}
-    className={cn(
-      'font-garamond tracking-tighter uppercase text-white transition-opacity',
-      !active && 'opacity-50 hover:opacity-70',
-      className,
-    )}
-  >
-    {children}
-  </Link>
-);
+}) => {
+  const { selectedAccount } = useSolana();
+  const targetHref =
+    href === '/battle' && selectedAccount
+      ? `/battle?wallet=${encodeURIComponent(selectedAccount.address)}`
+      : href;
+
+  return (
+    <Link
+      href={targetHref}
+      onClick={onClick}
+      className={cn(
+        'font-garamond tracking-tighter uppercase text-white transition-opacity',
+        !active && 'opacity-50 hover:opacity-70',
+        className,
+      )}
+    >
+      {children}
+    </Link>
+  );
+};
 
 const MobileNav = ({
   isOpen,

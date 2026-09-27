@@ -3,7 +3,7 @@
 import '@/components/battle/roster.css';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 import { useParams, useRouter } from 'next/navigation';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -123,7 +123,9 @@ export default function LobbyPage() {
         variant="error"
         title="Lobby not found"
         message="This lobby does not exist."
-        redirectTo="/battle"
+        redirectTo={
+          address ? `/battle?wallet=${encodeURIComponent(address)}` : '/battle'
+        }
       />
     );
   if (lobby.status === 'cancelled' || lobby.status === 'expired')
@@ -131,7 +133,9 @@ export default function LobbyPage() {
       <PageStateCard
         title="Lobby closed"
         message="This lobby is no longer available."
-        redirectTo="/battle"
+        redirectTo={
+          address ? `/battle?wallet=${encodeURIComponent(address)}` : '/battle'
+        }
       />
     );
   if (lobby.status === 'started')
@@ -142,7 +146,9 @@ export default function LobbyPage() {
         variant="error"
         title="Lobby full"
         message="Only the two participants can join this lobby."
-        redirectTo="/battle"
+        redirectTo={
+          address ? `/battle?wallet=${encodeURIComponent(address)}` : '/battle'
+        }
       />
     ) : (
       <PageStateCard variant="loading" message="Joining lobby..." />
@@ -160,7 +166,9 @@ export default function LobbyPage() {
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link href="/battle">Back to arena</Link>
+            <Link href={`/battle?wallet=${encodeURIComponent(address)}`}>
+              Back to arena
+            </Link>
           </Button>
         </header>
         <p className="rounded-lg border p-4 text-sm">

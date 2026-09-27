@@ -57,7 +57,11 @@ export default function FooterSection() {
               Generate
             </TransitionLink>
             <TransitionLink
-              href="/battle"
+              href={
+                selectedAccount
+                  ? `/battle?wallet=${encodeURIComponent(selectedAccount.address)}`
+                  : '/battle'
+              }
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Battle

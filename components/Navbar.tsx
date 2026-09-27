@@ -47,13 +47,17 @@ export function Navbar() {
         <Link
           key={item.name}
           href={
-            (item.href === '/marketplace' || item.href === '/generate') &&
+            (item.href === '/marketplace' ||
+              item.href === '/generate' ||
+              item.href === '/battle') &&
             selectedAccount
               ? `${item.href}?wallet=${encodeURIComponent(selectedAccount.address)}`
               : item.href
           }
           prefetch={
-            item.href === '/marketplace' || item.href === '/generate'
+            item.href === '/marketplace' ||
+            item.href === '/generate' ||
+            item.href === '/battle'
               ? true
               : undefined
           }
