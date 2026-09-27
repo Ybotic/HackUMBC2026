@@ -33,8 +33,10 @@ export default function BattlePlayPage() {
   const { selectedAccount, isInitialized } = useSolana();
   const battle = useQuery(api.battle.getBattleWithNFTData, { battleId });
   const executeTurn = useMutation(api.battle.executeTurn);
+  const submitRoundAction = useMutation(api.battle.submitRoundAction);
   const changeActiveCard = useMutation(api.battle.changeActiveCard);
   const [selectedMove, setSelectedMove] = useState<string | null>(null);
+  const [switchTarget, setSwitchTarget] = useState<number | null>(null);
   const [movePopoverOpen, setMovePopoverOpen] = useState(false);
   const [inspected, setInspected] = useState<{
     side: 'you' | 'opponent';
@@ -44,11 +46,13 @@ export default function BattlePlayPage() {
   const [message, setMessage] = useState('');
   const [impact, setImpact] = useState<'you' | 'opponent' | null>(null);
   const [visualEvent, setVisualEvent] = useState<{
-    kind: 'attack' | 'switch';
+    kind: 'attack' | 'switch' | 'protect';
     target: 'you' | 'opponent';
     damage?: number;
     critical?: boolean;
     knockedOut?: boolean;
+    protectSuccess?: boolean;
+    blocked?: boolean;
   } | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [effectsEnabled, setEffectsEnabled] = useState(true);
@@ -73,6 +77,8 @@ export default function BattlePlayPage() {
   const latestDamage = latest?.damage;
   const latestCritical = latest?.wasCritical;
   const latestTargetHealth = latest?.targetHealth;
+  const latestProtectSuccess = latest?.protectSuccess;
+  const latestBlocked = latest?.blocked;
   const localAddress = selectedAccount?.address;
   const localActive =
     selectedAccount?.address === battle?.player1Address
@@ -80,6 +86,7 @@ export default function BattlePlayPage() {
       : battle?.gameState.player2Active;
   useEffect(() => {
     setSelectedMove(null);
+    setSwitchTarget(null);
     setMovePopoverOpen(false);
   }, [localActive, battle?.battleId]);
   useEffect(() => {
@@ -115,13 +122,14 @@ export default function BattlePlayPage() {
       latestPlayer === localAddress ? 'opponent' : 'you';
     if (!effectsEnabled) return;
     const event =
-      latestKind === 'switch'
+      latestKind === 'switch' || latestKind === 'protect'
         ? {
-            kind: 'switch' as const,
+            kind: latestKind,
             target:
               latestPlayer === localAddress
                 ? ('you' as const)
                 : ('opponent' as const),
+            protectSuccess: latestProtectSuccess,
           }
         : {
             kind: 'attack' as const,
@@ -129,10 +137,13 @@ export default function BattlePlayPage() {
             damage: latestDamage ?? 0,
             critical: latestCritical ?? false,
             knockedOut: latestTargetHealth === 0,
+            blocked: latestBlocked,
           };
     const frame = requestAnimationFrame(() => {
       setVisualEvent(event);
-      setImpact(latestKind === 'switch' ? null : target);
+      setImpact(
+        latestKind === 'switch' || latestKind === 'protect' ? null : target,
+      );
     });
     const timer = window.setTimeout(() => {
       setImpact(null);
@@ -149,6 +160,8 @@ export default function BattlePlayPage() {
     latestDamage,
     latestCritical,
     latestTargetHealth,
+    latestProtectSuccess,
+    latestBlocked,
     battle?.battleId,
     localAddress,
     effectsEnabled,
@@ -292,7 +305,16 @@ export default function BattlePlayPage() {
     : [{ name: 'Strike', description: 'A basic attack.', iconName: 'Swords' }];
   const finished = battle.gameState.status === 'finished';
   const active = battle.gameState.status === 'active';
-  const yourTurn = battle.gameState.currentTurn === selectedAccount.address;
+  const priorityBattle = battle.rulesVersion === 2;
+  const choiceLocked = !!(isPlayer1
+    ? battle.gameState.roundChoices?.player1
+    : battle.gameState.roundChoices?.player2);
+  const yourTurn = priorityBattle
+    ? !choiceLocked &&
+      (yourActiveIndex === undefined || opponentActiveIndex === undefined
+        ? battle.gameState.currentTurn === selectedAccount.address
+        : true)
+    : battle.gameState.currentTurn === selectedAccount.address;
   const canAct =
     active && yourTurn && !battle.gameState.pendingTurn && !executing;
   const needsReplacement =
@@ -301,17 +323,25 @@ export default function BattlePlayPage() {
     ? 'The final result is recorded.'
     : needsReplacement && yourTurn
       ? 'Your card was knocked out. Choose a surviving reserve to continue.'
-      : message ||
-        (battle.gameState.pendingTurn
-          ? 'A turn is being processed.'
-          : yourTurn
-            ? selectedMove
-              ? `Ready to use ${selectedMove}. Confirm to resolve the turn.`
-              : 'Your turn. Choose a move from the hover box.'
-            : `Waiting for ${opponentName}.`);
+      : priorityBattle && choiceLocked
+        ? 'Action locked. Waiting for the rival to choose.'
+        : priorityBattle && !yourTurn
+          ? 'Waiting for the rival to choose a replacement.'
+          : message ||
+            (battle.gameState.pendingTurn
+              ? 'A turn is being processed.'
+              : yourTurn
+                ? selectedMove
+                  ? `Ready to use ${selectedMove}. Confirm to resolve the turn.`
+                  : 'Your turn. Choose a move from the hover box.'
+                : `Waiting for ${opponentName}.`);
   const won = battle.gameState.winner === selectedAccount.address;
   const displayTurn = yourTurn ? 'player' : 'opponent';
-  const selectedMoveIsValid = moves.some((move) => move.name === selectedMove);
+  const selectedMoveIsValid = moves.some(
+    (move) =>
+      move.name === selectedMove &&
+      (move.kind !== 'switchout' || switchTarget !== null),
+  );
   const inspectedRoster =
     inspected?.side === 'you' ? yourRoster : opponentRoster;
   const inspectedData =
@@ -338,7 +368,13 @@ export default function BattlePlayPage() {
   }
   const canSwitch =
     inspected?.side === 'you' &&
-    canAct &&
+    active &&
+    !executing &&
+    (needsReplacement
+      ? yourTurn
+      : priorityBattle
+        ? canAct && moves.some((move) => move.kind === 'switchout')
+        : canAct) &&
     inspectedCard &&
     yourLineup.includes(inspected.index) &&
     inspected.index !== yourActiveIndex &&
@@ -346,6 +382,14 @@ export default function BattlePlayPage() {
 
   async function switchCard() {
     if (!inspected || !selectedAccount || !canSwitch) return;
+    if (priorityBattle && !needsReplacement) {
+      const switchMove = moves.find((move) => move.kind === 'switchout');
+      if (!switchMove) return;
+      setSwitchTarget(inspected.index);
+      setSelectedMove(switchMove.name);
+      closeInspection();
+      return;
+    }
     setExecuting(true);
     try {
       await changeActiveCard({
@@ -354,6 +398,7 @@ export default function BattlePlayPage() {
         cardIndex: inspected.index,
       });
       setSelectedMove(null);
+      setSwitchTarget(null);
       setInspected(null);
     } catch (error) {
       toast.error(
@@ -365,20 +410,43 @@ export default function BattlePlayPage() {
   }
 
   async function attack() {
-    if (!selectedMove || !canAct || needsReplacement || !selectedAccount)
+    if (
+      !battle ||
+      !selectedMove ||
+      !selectedMoveIsValid ||
+      !canAct ||
+      needsReplacement ||
+      !selectedAccount
+    )
       return;
     setExecuting(true);
-    setMessage('Resolving turn...');
+    setMessage(priorityBattle ? 'Locking action...' : 'Resolving turn...');
     try {
-      const result = await executeTurn({
-        battleId,
-        playerAddress: selectedAccount.address,
-        action: selectedMove,
-      });
-      setMessage(
-        `${result.wasCritical ? 'Critical hit! ' : ''}${result.damage} damage dealt.`,
-      );
+      if (priorityBattle) {
+        const result = await submitRoundAction({
+          battleId,
+          playerAddress: selectedAccount.address,
+          expectedRound: battle.gameState.turnNumber + 1,
+          action: selectedMove,
+          ...(switchTarget === null ? {} : { cardIndex: switchTarget }),
+        });
+        setMessage(
+          result.resolved
+            ? 'Round resolved.'
+            : 'Action locked. Waiting for the rival.',
+        );
+      } else {
+        const result = await executeTurn({
+          battleId,
+          playerAddress: selectedAccount.address,
+          action: selectedMove,
+        });
+        setMessage(
+          `${result.wasCritical ? 'Critical hit! ' : ''}${result.damage} damage dealt.`,
+        );
+      }
       setSelectedMove(null);
+      setSwitchTarget(null);
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'Unable to play that move';
@@ -410,10 +478,14 @@ export default function BattlePlayPage() {
             finished
               ? 'MATCH COMPLETE'
               : yourTurn
-                ? 'YOUR TURN'
-                : "OPPONENT'S TURN"
+                ? priorityBattle
+                  ? 'CHOOSE ACTION'
+                  : 'YOUR TURN'
+                : priorityBattle
+                  ? 'WAITING FOR RIVAL'
+                  : "OPPONENT'S TURN"
           }
-          matchLabel={`MINT ARENA · TURN ${battle.gameState.turnNumber}`}
+          matchLabel={`MINT ARENA · ${priorityBattle ? 'ROUND' : 'TURN'} ${battle.gameState.turnNumber}`}
           showStacks={false}
           showPrizes={false}
           showOpponentHand={false}
@@ -465,14 +537,42 @@ export default function BattlePlayPage() {
                   <button
                     key={`${move.name}-${index}`}
                     type="button"
-                    disabled={!canAct || needsReplacement}
+                    disabled={
+                      !canAct ||
+                      needsReplacement ||
+                      (move.kind === 'switchout' &&
+                        !yourLineup.some(
+                          (index) =>
+                            index !== yourActiveIndex &&
+                            (yourCardHealth[index] ?? 0) > 0,
+                        ))
+                    }
                     aria-pressed={selectedMove === move.name}
-                    onClick={() => {
+                    onClick={(event) => {
                       setSelectedMove(move.name);
+                      setSwitchTarget(null);
                       setMovePopoverOpen(false);
+                      if (priorityBattle && move.kind === 'switchout') {
+                        const reserve = yourLineup.find(
+                          (index) =>
+                            index !== yourActiveIndex &&
+                            (yourCardHealth[index] ?? 0) > 0,
+                        );
+                        if (reserve !== undefined)
+                          openInspection(event.currentTarget, 'you', reserve);
+                      }
                     }}
                   >
                     <b>{move.name}</b>
+                    <small>
+                      {move.kind === 'attack'
+                        ? `${getNFTTypeName(move.element ?? activeCard?.stats.nftType ?? -1)} attack`
+                        : move.kind === 'protect'
+                          ? 'Protect · priority'
+                          : move.kind === 'switchout'
+                            ? 'Switchout · choose a reserve'
+                            : 'Attack'}
+                    </small>
                     <small>{move.description}</small>
                   </button>
                 ))}
@@ -528,16 +628,26 @@ export default function BattlePlayPage() {
             <span className="live-event-beam" />
             <span className="live-event-ring" />
             <strong>
-              {visualEvent.kind === 'switch'
-                ? 'SWITCH'
-                : visualEvent.knockedOut
-                  ? 'KNOCKOUT'
-                  : visualEvent.critical
-                    ? 'CRITICAL HIT'
-                    : 'HIT'}
+              {visualEvent.kind === 'protect'
+                ? visualEvent.protectSuccess
+                  ? 'PROTECTED'
+                  : 'PROTECT FAILED'
+                : visualEvent.kind === 'switch'
+                  ? 'SWITCH'
+                  : visualEvent.knockedOut
+                    ? 'KNOCKOUT'
+                    : visualEvent.blocked
+                      ? 'BLOCKED'
+                      : visualEvent.critical
+                        ? 'CRITICAL HIT'
+                        : 'HIT'}
             </strong>
             {visualEvent.kind === 'attack' && (
-              <b>{visualEvent.damage} DAMAGE</b>
+              <b>
+                {visualEvent.blocked
+                  ? 'NO DAMAGE'
+                  : `${visualEvent.damage} DAMAGE`}
+              </b>
             )}
           </div>
         )}
@@ -657,7 +767,15 @@ export default function BattlePlayPage() {
                     []
                   ).map((move, index) => (
                     <p key={`${move.name}-${index}`}>
-                      <b>{move.name}</b> · {move.description}
+                      <b>{move.name}</b> ·{' '}
+                      {move.kind === 'attack'
+                        ? `${getNFTTypeName(move.element ?? inspectedCard.stats.nftType)} attack · `
+                        : move.kind === 'protect'
+                          ? 'Protect · '
+                          : move.kind === 'switchout'
+                            ? 'Switchout · '
+                            : ''}
+                      {move.description}
                     </p>
                   ))}
                 </div>
@@ -669,7 +787,9 @@ export default function BattlePlayPage() {
                   >
                     {needsReplacement
                       ? 'Choose replacement'
-                      : 'Switch to this card (uses turn)'}
+                      : priorityBattle
+                        ? 'Select for Switchout'
+                        : 'Switch to this card (uses turn)'}
                   </button>
                 )}
                 {rosterBattle && (
@@ -717,7 +837,7 @@ export default function BattlePlayPage() {
                   ? won
                     ? 'VICTORY'
                     : 'DEFEAT'
-                  : `TURN ${battle.gameState.turnNumber}`}
+                  : `${priorityBattle ? 'ROUND' : 'TURN'} ${battle.gameState.turnNumber}`}
               </small>
             </span>
           </div>
@@ -769,7 +889,11 @@ export default function BattlePlayPage() {
             >
               <span>
                 <b>CHOOSE MOVE</b>
-                <small>{selectedMove || 'VIEW MOVES'}</small>
+                <small>
+                  {selectedMove
+                    ? `${selectedMove}${switchTarget !== null ? ` → NFT ${switchTarget + 1}` : ''}`
+                    : 'VIEW MOVES'}
+                </small>
               </span>
             </button>
             <button
@@ -802,7 +926,9 @@ export default function BattlePlayPage() {
                     ? 'RESOLVING…'
                     : finished
                       ? 'MATCH COMPLETE'
-                      : 'PLAY MOVE'}
+                      : priorityBattle
+                        ? 'LOCK ACTION'
+                        : 'PLAY MOVE'}
                 </b>
                 <small>
                   {executing
@@ -851,7 +977,7 @@ export default function BattlePlayPage() {
                 [...battle.moves].reverse().map((move) => (
                   <article className="live-log-entry" key={move.turnId}>
                     <small>
-                      TURN {move.turnNumber} ·{' '}
+                      {priorityBattle ? 'ROUND' : 'TURN'} {move.turnNumber} ·{' '}
                       {move.player === selectedAccount.address
                         ? 'YOU'
                         : opponentName}
@@ -860,7 +986,11 @@ export default function BattlePlayPage() {
                     <span>
                       {move.kind === 'switch'
                         ? 'CARD CHANGE'
-                        : `${move.damage ?? 0} DAMAGE${move.wasCritical ? ' · CRITICAL' : ''}`}
+                        : move.kind === 'protect'
+                          ? move.protectSuccess
+                            ? 'PROTECTED'
+                            : 'PROTECT FAILED'
+                          : `${move.damage ?? 0} DAMAGE${move.blocked ? ' · BLOCKED' : ''}${move.effectiveness && move.effectiveness !== 1 ? (move.effectiveness > 1 ? ' · SUPER EFFECTIVE' : ' · RESISTED') : ''}${move.wasCritical ? ' · CRITICAL' : ''}`}
                     </span>
                     <time dateTime={new Date(move.timestamp).toISOString()}>
                       {new Date(move.timestamp).toLocaleTimeString()}

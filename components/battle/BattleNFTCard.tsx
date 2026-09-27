@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { getIpfsImageUrl, getNFTMetadata } from '@/lib/utils';
 
 export type LiveNFT = {
@@ -40,14 +40,15 @@ export function BattleNFTCard({
   active?: boolean;
   impact?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
-  const [ratio, setRatio] = useState(1);
+  const [imageState, setImageState] = useState<{
+    src: string | null;
+    ratio: number;
+    failed: boolean;
+  }>({ src: null, ratio: 1, failed: false });
   const meta = getNFTMetadata(metadata);
   const image = getIpfsImageUrl(meta);
-  useEffect(() => {
-    setFailed(false);
-    setRatio(1);
-  }, [image]);
+  const failed = imageState.src === image && imageState.failed;
+  const ratio = imageState.src === image ? imageState.ratio : 1;
   const name = meta?.name || `NFT #${card.item}`;
   return (
     <button
@@ -64,9 +65,13 @@ export function BattleNFTCard({
           onLoad={(event) => {
             const { naturalWidth, naturalHeight } = event.currentTarget;
             if (naturalWidth && naturalHeight)
-              setRatio(naturalWidth / naturalHeight);
+              setImageState({
+                src: image,
+                ratio: naturalWidth / naturalHeight,
+                failed: false,
+              });
           }}
-          onError={() => setFailed(true)}
+          onError={() => setImageState({ src: image, ratio: 1, failed: true })}
         />
       ) : (
         <span className="battle-image-fallback">Artwork unavailable</span>
