@@ -7,13 +7,11 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useSolana } from '@/lib/providers/SolanaProvider';
 import { useNFTs } from '@/hooks/useNFTs';
-import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 import {
   getPlayerDisplayName,
   getNFTTypeName,
   formatTimeLeft,
 } from '@/lib/battle-utils';
-import { MintArena, type ArenaFighter } from '@/components/battle/MintArena';
 import { PageStateCard } from '@/components/battle/PageStateCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -110,17 +108,6 @@ export default function BattlePage() {
       />
     );
 
-  const featured = nfts?.[0];
-  const metadata = getNFTMetadata(featured?.itemMetadata);
-  const fighter: ArenaFighter | undefined = featured
-    ? {
-        name: metadata?.name || `Card #${featured.item}`,
-        image: getIpfsImageUrl(metadata),
-        type: featured.stats?.nftType ?? -1,
-        owner: 'YOUR COLLECTION',
-        description: metadata?.description,
-      }
-    : undefined;
   const recent = activeBattles?.[0];
 
   return (
@@ -162,290 +149,271 @@ export default function BattlePage() {
           </Badge>
         </header>
 
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)]">
-          <section className="min-w-0" aria-label="Featured card arena">
-            <MintArena
-              you={fighter}
-              turnLabel={
-                recent ? `MATCH ${recent.battleId}` : 'READY WHEN YOU ARE'
-              }
-              compact
-            />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-              <span>Featured from your collection</span>
-              <Badge variant="outline" className="font-normal">
-                Choose your battle card in the lobby
+        <Card className="mx-auto w-full max-w-3xl gap-0 overflow-hidden py-0 shadow-sm">
+          <CardHeader className="gap-3 p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <Badge
+                variant="outline"
+                className="font-mono text-[11px] tracking-wider text-muted-foreground"
+              >
+                01 / PLAY
               </Badge>
+              <Swords className="size-4 text-muted-foreground" />
             </div>
-          </section>
+            <div className="space-y-1.5">
+              <CardTitle className="text-xl tracking-tight">
+                Start a match
+              </CardTitle>
+              <CardDescription>
+                Create a table or join a rival with an invite code.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <Separator />
+          <CardContent className="space-y-5 p-5 sm:p-6">
+            {recent && (
+              <Button
+                asChild
+                variant="secondary"
+                className="w-full justify-between"
+              >
+                <Link href={`/battle/play/${recent.battleId}`}>
+                  <span>Continue your active match</span>
+                  <ArrowRight />
+                </Link>
+              </Button>
+            )}
 
-          <div className="space-y-4">
-            <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-              <CardHeader className="gap-3 p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <Badge
-                    variant="outline"
-                    className="font-mono text-[11px] tracking-wider text-muted-foreground"
-                  >
-                    01 / PLAY
-                  </Badge>
-                  <Swords className="size-4 text-muted-foreground" />
-                </div>
-                <div className="space-y-1.5">
-                  <CardTitle className="text-xl tracking-tight">
-                    Start a match
-                  </CardTitle>
-                  <CardDescription>
-                    Create a table or join a rival with an invite code.
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="space-y-5 p-5 sm:p-6">
-                {recent && (
-                  <Button
-                    asChild
-                    variant="secondary"
-                    className="w-full justify-between"
-                  >
-                    <Link href={`/battle/play/${recent.battleId}`}>
-                      <span>Continue your active match</span>
-                      <ArrowRight />
-                    </Link>
-                  </Button>
-                )}
+            <div className="grid gap-2.5">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full justify-between"
+                disabled={busy}
+                onClick={() => create(false)}
+              >
+                <span className="flex items-center gap-2">
+                  <Plus />
+                  {busy ? 'Creating match…' : 'Create public match'}
+                </span>
+                <ArrowRight />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full justify-start"
+                disabled={busy}
+                onClick={() => create(true)}
+              >
+                <LockKeyhole /> Private match
+              </Button>
+            </div>
 
-                <div className="grid gap-2.5">
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="w-full justify-between"
-                    disabled={busy}
-                    onClick={() => create(false)}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Plus />
-                      {busy ? 'Creating match…' : 'Create public match'}
-                    </span>
-                    <ArrowRight />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="w-full justify-start"
-                    disabled={busy}
-                    onClick={() => create(true)}
-                  >
-                    <LockKeyhole /> Private match
-                  </Button>
-                </div>
+            <div className="space-y-2.5">
+              <Label htmlFor="mint-lobby-code">Have an invite code?</Label>
+              <form
+                className="flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void join(code);
+                }}
+              >
+                <Input
+                  id="mint-lobby-code"
+                  placeholder="Enter lobby code"
+                  value={code}
+                  onChange={(event) =>
+                    setCode(event.target.value.toUpperCase())
+                  }
+                  maxLength={12}
+                  className="font-mono uppercase tracking-wider"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="icon"
+                  disabled={busy || !code.trim()}
+                  aria-label="Join lobby by code"
+                >
+                  <ArrowRight />
+                </Button>
+              </form>
+            </div>
 
-                <div className="space-y-2.5">
-                  <Label htmlFor="mint-lobby-code">Have an invite code?</Label>
-                  <form
-                    className="flex gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void join(code);
-                    }}
-                  >
-                    <Input
-                      id="mint-lobby-code"
-                      placeholder="Enter lobby code"
-                      value={code}
-                      onChange={(event) =>
-                        setCode(event.target.value.toUpperCase())
-                      }
-                      maxLength={12}
-                      className="font-mono uppercase tracking-wider"
-                    />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="icon"
-                      disabled={busy || !code.trim()}
-                      aria-label="Join lobby by code"
-                    >
-                      <ArrowRight />
-                    </Button>
-                  </form>
-                </div>
+            {nfts?.length === 0 && (
+              <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                No cards in your collection yet.{' '}
+                <Link
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  href="/generate"
+                >
+                  Create a card
+                </Link>{' '}
+                before readying up in a lobby.
+              </div>
+            )}
+            {nfts === undefined && (
+              <p className="text-sm text-muted-foreground">
+                Loading your cards…
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-                {nfts?.length === 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                    No cards in your collection yet.{' '}
-                    <Link
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                      href="/generate"
-                    >
-                      Create a card
-                    </Link>{' '}
-                    before readying up in a lobby.
-                  </div>
-                )}
-                {nfts === undefined && (
-                  <p className="text-sm text-muted-foreground">
-                    Loading your cards…
+        <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+            <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base">Open lobbies</CardTitle>
+                <Badge variant="outline" className="tabular-nums">
+                  {publicLobbies?.length ?? '—'}
+                </Badge>
+              </div>
+              <CardDescription>
+                Public matches looking for a rival.
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="px-5 sm:px-6">
+              {publicLobbies === undefined ? (
+                <div className="space-y-3 py-4" aria-label="Finding matches">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-4/5" />
+                </div>
+              ) : publicLobbies.length === 0 ? (
+                <div className="py-6 text-center">
+                  <Users className="mx-auto mb-2 size-5 text-muted-foreground" />
+                  <p className="text-sm font-medium">No open lobbies</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Start a public match and invite a rival.
                   </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-              <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">Open lobbies</CardTitle>
-                  <Badge variant="outline" className="tabular-nums">
-                    {publicLobbies?.length ?? '—'}
-                  </Badge>
                 </div>
-                <CardDescription>
-                  Public matches looking for a rival.
-                </CardDescription>
-              </CardHeader>
-              <Separator />
-              <CardContent className="px-5 sm:px-6">
-                {publicLobbies === undefined ? (
-                  <div className="space-y-3 py-4" aria-label="Finding matches">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-4/5" />
-                  </div>
-                ) : publicLobbies.length === 0 ? (
-                  <div className="py-6 text-center">
-                    <Users className="mx-auto mb-2 size-5 text-muted-foreground" />
-                    <p className="text-sm font-medium">No open lobbies</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Start a public match and invite a rival.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {publicLobbies.map((lobby) => (
+              ) : (
+                <div className="divide-y">
+                  {publicLobbies.map((lobby) => (
+                    <div
+                      className="flex items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
+                      key={lobby._id}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          <Users className="size-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {getPlayerDisplayName(
+                              lobby.creatorAddress,
+                              lobby.creatorName,
+                            )}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span className="font-mono">{lobby.lobbyId}</span>
+                            <span aria-hidden="true">·</span>
+                            <Clock3 className="size-3" />
+                            {formatTimeLeft(lobby.expiresAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        disabled={busy}
+                        onClick={() =>
+                          join(lobby.lobbyId, lobby.creatorAddress)
+                        }
+                      >
+                        {lobby.creatorAddress === selectedAccount.address
+                          ? 'Enter'
+                          : 'Join'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+            <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base">Your matches</CardTitle>
+                <Badge variant="outline" className="tabular-nums">
+                  {activeBattles?.length ?? '—'}
+                </Badge>
+              </div>
+              <CardDescription>
+                Pick up where your last match left off.
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="px-5 sm:px-6">
+              {activeBattles === undefined ? (
+                <div className="space-y-3 py-4" aria-label="Loading matches">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-4/5" />
+                </div>
+              ) : activeBattles.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No ongoing matches. Your next one starts here.
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {activeBattles.map((battle) => {
+                    const isYourTurn =
+                      battle.gameState.currentTurn === selectedAccount.address;
+                    const opponent = getPlayerDisplayName(
+                      battle.player1Address === selectedAccount.address
+                        ? battle.player2Address
+                        : battle.player1Address,
+                      battle.player1Address === selectedAccount.address
+                        ? battle.player2Name
+                        : battle.player1Name,
+                    );
+
+                    return (
                       <div
                         className="flex items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
-                        key={lobby._id}
+                        key={battle._id}
                       >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                            <Users className="size-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">
-                              {getPlayerDisplayName(
-                                lobby.creatorAddress,
-                                lobby.creatorName,
-                              )}
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium">
+                              Turn {battle.gameState.turnNumber}
                             </p>
-                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <span className="font-mono">{lobby.lobbyId}</span>
-                              <span aria-hidden="true">·</span>
-                              <Clock3 className="size-3" />
-                              {formatTimeLeft(lobby.expiresAt)}
-                            </p>
+                            <Badge
+                              variant="outline"
+                              className="gap-1.5 text-[10px] font-medium"
+                            >
+                              <span
+                                className={`size-1.5 rounded-full ${isYourTurn ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
+                              />
+                              {isYourTurn ? 'Your turn' : 'Waiting'}
+                            </Badge>
                           </div>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            vs {opponent}
+                          </p>
                         </div>
                         <Button
-                          type="button"
-                          variant="outline"
+                          asChild
+                          variant="ghost"
                           size="sm"
                           className="shrink-0"
-                          disabled={busy}
-                          onClick={() =>
-                            join(lobby.lobbyId, lobby.creatorAddress)
-                          }
                         >
-                          {lobby.creatorAddress === selectedAccount.address
-                            ? 'Enter'
-                            : 'Join'}
+                          <Link href={`/battle/play/${battle.battleId}`}>
+                            Continue <ArrowRight />
+                          </Link>
                         </Button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-              <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">Your matches</CardTitle>
-                  <Badge variant="outline" className="tabular-nums">
-                    {activeBattles?.length ?? '—'}
-                  </Badge>
+                    );
+                  })}
                 </div>
-                <CardDescription>
-                  Pick up where your last match left off.
-                </CardDescription>
-              </CardHeader>
-              <Separator />
-              <CardContent className="px-5 sm:px-6">
-                {activeBattles === undefined ? (
-                  <div className="space-y-3 py-4" aria-label="Loading matches">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-4/5" />
-                  </div>
-                ) : activeBattles.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    No ongoing matches. Your next one starts here.
-                  </p>
-                ) : (
-                  <div className="divide-y">
-                    {activeBattles.map((battle) => {
-                      const isYourTurn =
-                        battle.gameState.currentTurn ===
-                        selectedAccount.address;
-                      const opponent = getPlayerDisplayName(
-                        battle.player1Address === selectedAccount.address
-                          ? battle.player2Address
-                          : battle.player1Address,
-                        battle.player1Address === selectedAccount.address
-                          ? battle.player2Name
-                          : battle.player1Name,
-                      );
-
-                      return (
-                        <div
-                          className="flex items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
-                          key={battle._id}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium">
-                                Turn {battle.gameState.turnNumber}
-                              </p>
-                              <Badge
-                                variant="outline"
-                                className="gap-1.5 text-[10px] font-medium"
-                              >
-                                <span
-                                  className={`size-1.5 rounded-full ${isYourTurn ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
-                                />
-                                {isYourTurn ? 'Your turn' : 'Waiting'}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 truncate text-xs text-muted-foreground">
-                              vs {opponent}
-                            </p>
-                          </div>
-                          <Button
-                            asChild
-                            variant="ghost"
-                            size="sm"
-                            className="shrink-0"
-                          >
-                            <Link href={`/battle/play/${battle.battleId}`}>
-                              Continue <ArrowRight />
-                            </Link>
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="mt-6 gap-0 overflow-hidden py-0 shadow-sm">
