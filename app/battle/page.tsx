@@ -149,120 +149,120 @@ export default function BattlePage() {
           </Badge>
         </header>
 
-        <Card className="mx-auto w-full max-w-3xl gap-0 overflow-hidden py-0 shadow-sm">
-          <CardHeader className="gap-3 p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <Badge
-                variant="outline"
-                className="font-mono text-[11px] tracking-wider text-muted-foreground"
-              >
-                01 / PLAY
-              </Badge>
-              <Swords className="size-4 text-muted-foreground" />
-            </div>
-            <div className="space-y-1.5">
-              <CardTitle className="text-xl tracking-tight">
-                Start a match
-              </CardTitle>
-              <CardDescription>
-                Create a table or join a rival with an invite code.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <Separator />
-          <CardContent className="space-y-5 p-5 sm:p-6">
-            {recent && (
-              <Button
-                asChild
-                variant="secondary"
-                className="w-full justify-between"
-              >
-                <Link href={`/battle/play/${recent.battleId}`}>
-                  <span>Continue your active match</span>
-                  <ArrowRight />
-                </Link>
-              </Button>
-            )}
-
-            <div className="grid gap-2.5">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full justify-between"
-                disabled={busy}
-                onClick={() => create(false)}
-              >
-                <span className="flex items-center gap-2">
-                  <Plus />
-                  {busy ? 'Creating match…' : 'Create public match'}
-                </span>
-                <ArrowRight />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full justify-start"
-                disabled={busy}
-                onClick={() => create(true)}
-              >
-                <LockKeyhole /> Private match
-              </Button>
-            </div>
-
-            <div className="space-y-2.5">
-              <Label htmlFor="mint-lobby-code">Have an invite code?</Label>
-              <form
-                className="flex gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void join(code);
-                }}
-              >
-                <Input
-                  id="mint-lobby-code"
-                  placeholder="Enter lobby code"
-                  value={code}
-                  onChange={(event) =>
-                    setCode(event.target.value.toUpperCase())
-                  }
-                  maxLength={12}
-                  className="font-mono uppercase tracking-wider"
-                />
-                <Button
-                  type="submit"
+        <div className="grid items-stretch gap-6 lg:grid-cols-2">
+          <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
+            <CardHeader className="gap-3 p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <Badge
                   variant="outline"
-                  size="icon"
-                  disabled={busy || !code.trim()}
-                  aria-label="Join lobby by code"
+                  className="font-mono text-[11px] tracking-wider text-muted-foreground"
                 >
+                  01 / PLAY
+                </Badge>
+                <Swords className="size-4 text-muted-foreground" />
+              </div>
+              <div className="space-y-1.5">
+                <CardTitle className="text-xl tracking-tight">
+                  Start a match
+                </CardTitle>
+                <CardDescription>
+                  Create a table or join a rival with an invite code.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <Separator />
+            <CardContent className="flex-1 space-y-5 p-5 sm:p-6">
+              {recent && (
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="w-full justify-between"
+                >
+                  <Link href={`/battle/play/${recent.battleId}`}>
+                    <span>Continue your active match</span>
+                    <ArrowRight />
+                  </Link>
+                </Button>
+              )}
+
+              <div className="grid gap-2.5">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full justify-between"
+                  disabled={busy}
+                  onClick={() => create(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <Plus />
+                    {busy ? 'Creating match…' : 'Create public match'}
+                  </span>
                   <ArrowRight />
                 </Button>
-              </form>
-            </div>
-
-            {nfts?.length === 0 && (
-              <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                No cards in your collection yet.{' '}
-                <Link
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                  href="/generate"
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full justify-start"
+                  disabled={busy}
+                  onClick={() => create(true)}
                 >
-                  Create a card
-                </Link>{' '}
-                before readying up in a lobby.
+                  <LockKeyhole /> Private match
+                </Button>
               </div>
-            )}
-            {nfts === undefined && (
-              <p className="text-sm text-muted-foreground">
-                Loading your cards…
-              </p>
-            )}
-          </CardContent>
-        </Card>
 
-        <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+              <div className="space-y-2.5">
+                <Label htmlFor="mint-lobby-code">Have an invite code?</Label>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void join(code);
+                  }}
+                >
+                  <Input
+                    id="mint-lobby-code"
+                    placeholder="Enter lobby code"
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.toUpperCase())
+                    }
+                    maxLength={12}
+                    className="font-mono uppercase tracking-wider"
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="icon"
+                    disabled={busy || !code.trim()}
+                    aria-label="Join lobby by code"
+                  >
+                    <ArrowRight />
+                  </Button>
+                </form>
+              </div>
+
+              {nfts?.length === 0 && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  No cards in your collection yet.{' '}
+                  <Link
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    href="/generate"
+                  >
+                    Create a card
+                  </Link>{' '}
+                  before readying up in a lobby.
+                </div>
+              )}
+              {nfts === undefined && (
+                <p className="text-sm text-muted-foreground">
+                  Loading your cards…
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
             <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-base">Open lobbies</CardTitle>
@@ -275,7 +275,7 @@ export default function BattlePage() {
               </CardDescription>
             </CardHeader>
             <Separator />
-            <CardContent className="px-5 sm:px-6">
+            <CardContent className="flex-1 px-5 sm:px-6">
               {publicLobbies === undefined ? (
                 <div className="space-y-3 py-4" aria-label="Finding matches">
                   <Skeleton className="h-10 w-full" />
@@ -290,7 +290,7 @@ export default function BattlePage() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y">
+                <div className="max-h-80 divide-y overflow-y-auto">
                   {publicLobbies.map((lobby) => (
                     <div
                       className="flex items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
@@ -336,7 +336,7 @@ export default function BattlePage() {
             </CardContent>
           </Card>
 
-          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+          <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
             <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-base">Your matches</CardTitle>
@@ -349,7 +349,7 @@ export default function BattlePage() {
               </CardDescription>
             </CardHeader>
             <Separator />
-            <CardContent className="px-5 sm:px-6">
+            <CardContent className="flex-1 px-5 sm:px-6">
               {activeBattles === undefined ? (
                 <div className="space-y-3 py-4" aria-label="Loading matches">
                   <Skeleton className="h-10 w-full" />
@@ -360,7 +360,7 @@ export default function BattlePage() {
                   No ongoing matches. Your next one starts here.
                 </p>
               ) : (
-                <div className="divide-y">
+                <div className="max-h-80 divide-y overflow-y-auto">
                   {activeBattles.map((battle) => {
                     const isYourTurn =
                       battle.gameState.currentTurn === selectedAccount.address;
@@ -414,98 +414,97 @@ export default function BattlePage() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        <Card className="mt-6 gap-0 overflow-hidden py-0 shadow-sm">
-          <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1.5">
-                <Badge
-                  variant="outline"
-                  className="font-mono text-[10px] tracking-wider text-muted-foreground"
-                >
-                  MATCH ARCHIVE
+          <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
+            <CardHeader className="gap-1.5 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1.5">
+                  <Badge
+                    variant="outline"
+                    className="font-mono text-[10px] tracking-wider text-muted-foreground"
+                  >
+                    MATCH ARCHIVE
+                  </Badge>
+                  <CardTitle className="text-base">Past battles</CardTitle>
+                </div>
+                <Badge variant="outline" className="tabular-nums">
+                  {history?.length ?? '—'}
                 </Badge>
-                <CardTitle className="text-base">Past battles</CardTitle>
               </div>
-              <Badge variant="outline" className="tabular-nums">
-                {history?.length ?? '—'}
-              </Badge>
-            </div>
-          </CardHeader>
-          <Separator />
-          <CardContent className="px-5 sm:px-6">
-            {history === undefined ? (
-              <div className="space-y-3 py-4" aria-label="Loading results">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-4/5" />
-              </div>
-            ) : history.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Your first result will appear here.
-              </p>
-            ) : (
-              <div className="divide-y">
-                {history.map((battle) => {
-                  const won =
-                    battle.gameState.winner === selectedAccount.address;
-                  const opponent = getPlayerDisplayName(
-                    battle.player1Address === selectedAccount.address
-                      ? battle.player2Address
-                      : battle.player1Address,
-                    battle.player1Address === selectedAccount.address
-                      ? battle.player2Name
-                      : battle.player1Name,
-                  );
-                  const cardType = getNFTTypeName(
-                    battle.player1Address === selectedAccount.address
-                      ? battle.player1NFT.stats.nftType
-                      : battle.player2NFT.stats.nftType,
-                  );
+            </CardHeader>
+            <Separator />
+            <CardContent className="flex-1 px-5 sm:px-6">
+              {history === undefined ? (
+                <div className="space-y-3 py-4" aria-label="Loading results">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-4/5" />
+                </div>
+              ) : history.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Your first result will appear here.
+                </p>
+              ) : (
+                <div className="max-h-80 divide-y overflow-y-auto">
+                  {history.map((battle) => {
+                    const won =
+                      battle.gameState.winner === selectedAccount.address;
+                    const opponent = getPlayerDisplayName(
+                      battle.player1Address === selectedAccount.address
+                        ? battle.player2Address
+                        : battle.player1Address,
+                      battle.player1Address === selectedAccount.address
+                        ? battle.player2Name
+                        : battle.player1Name,
+                    );
+                    const cardType = getNFTTypeName(
+                      battle.player1Address === selectedAccount.address
+                        ? battle.player1NFT.stats.nftType
+                        : battle.player2NFT.stats.nftType,
+                    );
 
-                  return (
-                    <div
-                      className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
-                      key={battle._id}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <Badge
-                          variant="outline"
-                          className={
-                            won
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                              : 'text-muted-foreground'
-                          }
-                        >
-                          {won ? 'Victory' : 'Defeat'}
-                        </Badge>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            vs {opponent}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {battle.gameState.turnNumber} turns · {cardType}{' '}
-                            card
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0"
+                    return (
+                      <div
+                        className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-4 last:pb-4"
+                        key={battle._id}
                       >
-                        <Link href={`/battle/play/${battle.battleId}`}>
-                          View result <ArrowRight />
-                        </Link>
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Badge
+                            variant="outline"
+                            className={
+                              won
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'text-muted-foreground'
+                            }
+                          >
+                            {won ? 'Victory' : 'Defeat'}
+                          </Badge>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">
+                              vs {opponent}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {battle.gameState.turnNumber} turns · {cardType}{' '}
+                              card
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          <Link href={`/battle/play/${battle.battleId}`}>
+                            View result <ArrowRight />
+                          </Link>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </main>
   );
