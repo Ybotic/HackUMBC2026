@@ -23,6 +23,7 @@ import {
 import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useBattleAnnouncer } from '@/lib/battle-announcer/useBattleAnnouncer';
 
 function InspectionImage({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
@@ -107,6 +108,7 @@ export default function BattlePlayPage() {
   const latestProtectSuccess = latest?.protectSuccess;
   const latestBlocked = latest?.blocked;
   const localAddress = selectedAccount?.address;
+  const announcer = useBattleAnnouncer(battleId, localAddress, battle);
   const localActive =
     selectedAccount?.address === battle?.player1Address
       ? battle?.gameState.player1Active
@@ -546,6 +548,26 @@ export default function BattlePlayPage() {
         aria-label={`${yourName} versus ${opponentName} live NFT battle`}
       >
         <BattleMusicControls />
+        <div className="live-announcer" aria-label="Battle announcer">
+          <button
+            type="button"
+            aria-pressed={announcer.enabled}
+            onClick={announcer.toggle}
+          >
+            Announcer: {announcer.enabled ? 'On' : 'Off'}
+          </button>
+          <p
+            className="live-announcer-caption"
+            aria-label="Announcer caption"
+            aria-live="off"
+          >
+            {announcer.caption ||
+              'Announcer captions appear here during the match.'}
+          </p>
+          {!announcer.hasClips && (
+            <small>Captions only — voice clips have not been generated.</small>
+          )}
+        </div>
         <BattleField
           handCount={yourLineup.length}
           showStacks={false}
