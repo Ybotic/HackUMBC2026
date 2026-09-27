@@ -315,7 +315,7 @@ export default function BattlePlayPage() {
                 style={{
                   minHeight: 22,
                   marginTop: 12,
-                  color: '#c8eac0',
+                  color: '#FC1F77',
                   fontSize: 13,
                 }}
               >

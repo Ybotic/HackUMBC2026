@@ -218,7 +218,7 @@ export default function Page() {
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="text-[#0089EE]"
+                className="text-[#0086F0]"
               />
               <motion.path
                 d="M6 10.5L8.5 13L14 7"
@@ -229,7 +229,7 @@ export default function Page() {
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
-                className="text-[#0089EE]"
+                className="text-[#0086F0]"
               />
             </svg>
           </motion.div>
