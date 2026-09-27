@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { Swords, Home, Sparkles, ShoppingCart } from 'lucide-react';
 import { WalletConnection } from '@/components/WalletConnection';
 import { useSolana } from '@/lib/providers/SolanaProvider';
-import { useEffect, useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -20,11 +19,6 @@ export function Navbar() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const { selectedAccount } = useSolana();
-  const [marketplacePending, setMarketplacePending] = useState(false);
-
-  useEffect(() => {
-    setMarketplacePending(false);
-  }, [pathname]);
 
   const shouldShowNavbar =
     pathname === '/dashboard' ||
@@ -61,18 +55,6 @@ export function Navbar() {
               ? true
               : undefined
           }
-          onClick={(event) => {
-            if (
-              item.href === '/marketplace' &&
-              pathname !== '/marketplace' &&
-              !event.metaKey &&
-              !event.ctrlKey &&
-              !event.shiftKey &&
-              !event.altKey
-            ) {
-              setMarketplacePending(true);
-            }
-          }}
           className={cn(
             'relative isolate flex items-center transition-colors rounded-md',
             isMobile
@@ -100,14 +82,6 @@ export function Navbar() {
             className={isMobile ? 'relative h-5 w-5' : 'relative h-4 w-4'}
           />
           {!isMobile && <span className="relative">{item.name}</span>}
-          {item.href === '/marketplace' && marketplacePending && (
-            <span
-              role="status"
-              className="absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary animate-pulse motion-reduce:animate-none"
-            >
-              <span className="sr-only">Loading marketplace</span>
-            </span>
-          )}
         </Link>
       ))}
     </div>
