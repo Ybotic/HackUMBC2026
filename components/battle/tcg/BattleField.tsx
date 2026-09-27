@@ -68,10 +68,10 @@ export default function BattleField({
   opponentPrizes = 0,
   handCount = 0,
   opponentHandCount = 0,
-  matchLabel = 'MINT ARENA · NFT DUEL',
   showStacks = true,
   showPrizes = true,
   showOpponentHand = true,
+  showHandTray = true,
 }: {
   deckCount?: number;
   opponentDiscardCount?: number;
@@ -80,10 +80,10 @@ export default function BattleField({
   opponentPrizes?: number;
   handCount?: number;
   opponentHandCount?: number;
-  matchLabel?: string;
   showStacks?: boolean;
   showPrizes?: boolean;
   showOpponentHand?: boolean;
+  showHandTray?: boolean;
 }) {
   return (
     <div className="battle-field" aria-hidden="true">
@@ -179,15 +179,18 @@ export default function BattleField({
         </>
       ) : null}
 
-      <div className="hand-tray" />
-      <div className="hand-caption">
-        <span>YOUR LINEUP</span>
-        <i />{' '}
-        <b>
-          {handCount} NFT{handCount === 1 ? '' : 'S'}
-        </b>
-      </div>
-      <div className="battle-edge-label">{matchLabel}</div>
+      {showHandTray ? (
+        <>
+          <div className="hand-tray" />
+          <div className="hand-caption">
+            <span>YOUR LINEUP</span>
+            <i />{' '}
+            <b>
+              {handCount} NFT{handCount === 1 ? '' : 'S'}
+            </b>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

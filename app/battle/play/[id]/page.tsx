@@ -537,10 +537,10 @@ export default function BattlePlayPage() {
       >
         <BattleField
           handCount={yourLineup.length}
-          matchLabel={`MINT ARENA · ${priorityBattle ? 'ROUND' : 'TURN'} ${battle.gameState.turnNumber}`}
           showStacks={false}
           showPrizes={false}
           showOpponentHand={false}
+          showHandTray={false}
         />
 
         <div

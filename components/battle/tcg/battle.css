@@ -751,18 +751,6 @@
   font-size: 6px;
 }
 
-.battle-client .battle-edge-label {
-  position: absolute;
-  right: 4.5%;
-  bottom: 8.4%;
-  color: rgba(224, 235, 249, 0.32);
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-}
-
-.battle-client .battle-edge-label span { padding: 0 5px; color: #f0c869; }
-
 /* Cards: original CSS-built placeholder art, deliberately independent from Unity assets. */
 .battle-client .card-piece {
   position: absolute;
@@ -1664,7 +1652,6 @@
   .battle-client .empty-slot { width: 17%; }
   .battle-client .hand-tray { bottom: 1.6%; width: 58vw; height: 27%; border-radius: 8px; }
   .battle-client .hand-caption { top: 77%; left: 21%; font-size: 6px; }
-  .battle-client .battle-edge-label { right: 3%; bottom: 8%; max-width: 67px; text-align: right; font-size: 5px; line-height: 1.4; }
   .battle-client .right-rail { top: 34%; width: 43px; min-height: 27%; }
   .battle-client .rail-section { padding: 4px 3px; }
   .battle-client .rail-score { height: 31px; font-size: 20px; }
@@ -1721,7 +1708,6 @@
   .battle-client .action-buttons { grid-template-columns: 0.8fr 1.2fr; }
   .battle-client .card-piece { width: clamp(62px, 18vw, 84px); }
   .battle-client .opponent-banner { top: 7.5%; }
-  .battle-client .battle-edge-label { display: none; }
   .battle-client .hand-tray { width: 64vw; }
   .battle-client .hand-caption { left: 18%; }
 }
