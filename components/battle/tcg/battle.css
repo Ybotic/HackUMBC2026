@@ -2648,7 +2648,7 @@
   right: 6px;
   bottom: 5px;
   left: 6px;
-  height: 4px;
+  height: 6px;
   overflow: hidden;
   border-radius: 99px;
   background: rgba(8, 10, 14, .72);
@@ -3105,7 +3105,7 @@
     --live-table-right: calc(100% - 66px - 2%);
   }
   .battle-client.live-match .battle-stage { min-height: 500px; }
-  .battle-client.live-match .battle-image-hp { right: 4px; bottom: 4px; left: 4px; height: 3px; }
+  .battle-client.live-match .battle-image-hp { right: 4px; bottom: 4px; left: 4px; height: 5px; }
   .battle-client.live-match .battle-image-ko { top: 3px; right: 3px; padding: 1px 4px; font-size: 7px; }
   .battle-client.live-match .live-event-label { padding: 5px 12px 6px; }
   .battle-client.live-match .live-event-label > strong { font-size: 11px; }
