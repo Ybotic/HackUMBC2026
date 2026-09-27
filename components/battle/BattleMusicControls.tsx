@@ -51,6 +51,7 @@ export function BattleMusicControls() {
     setActiveTrack(track.id);
     setStatus(`Loading ${track.title}…`);
     audio.pause();
+    audio.volume = 0.5;
     audio.src = `/music/${track.file}`;
     audio.load();
 
