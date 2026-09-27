@@ -43,3 +43,6 @@ next-env.d.ts
 
 # prisma client
 /lib/generated/prisma
+
+
+/tcg
