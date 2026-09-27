@@ -223,7 +223,7 @@ export function CreateAuction({ userAddress, onClose }: CreateAuctionProps) {
                               {
                                 label: 'SPD',
                                 value: selectedNft.stats.speed,
-                                color: 'bg-green-500',
+                                color: 'bg-primary',
                               },
                               {
                                 label: 'STR',

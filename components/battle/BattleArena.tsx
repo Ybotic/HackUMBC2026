@@ -65,7 +65,7 @@ export function BattleArena({
             className={`h-6 w-2 rounded-full ${
               index < filledSegments
                 ? isCurrentPlayer
-                  ? 'bg-green-400'
+                  ? 'bg-primary'
                   : 'bg-red-500'
                 : 'bg-white/10'
             }`}

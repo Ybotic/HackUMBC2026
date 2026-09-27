@@ -313,7 +313,7 @@ export function NFTSelector({
                       </span>
                     </div>
                     <div className="flex flex-col items-center justify-center p-1.5 bg-muted/30 rounded-sm text-center">
-                      <Brain className="h-4 w-4 text-green-500 mb-0.5" />
+                      <Brain className="h-4 w-4 text-primary mb-0.5" />
                       <span className="text-xs text-muted-foreground">INT</span>
                       <span className="font-bold text-base">
                         {selectedNFT.stats?.intelligence || 0}

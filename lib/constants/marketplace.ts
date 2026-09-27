@@ -30,8 +30,8 @@ export const MYSTERY_BOX_TIERS = {
     name: 'Uncommon Box',
     price: TIER_PRICES.uncommon,
     icon: Gift,
-    color: 'text-green-500',
-    bgColor: 'bg-green-100 dark:bg-green-900',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
     multiplier: `${TIER_MULTIPLIERS.uncommon}x`,
     description: 'Enhanced mystery box with improved NFTs',
   },
@@ -69,7 +69,7 @@ export const NFT_TYPES = ['Fire', 'Water', 'Grass'] as const;
 export const NFT_TYPE_COLORS = {
   0: 'bg-red-500',
   1: 'bg-blue-500',
-  2: 'bg-green-500',
+  2: 'bg-primary',
 } as const;
 
 export const generateId = (prefix: string) =>

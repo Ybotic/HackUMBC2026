@@ -24,7 +24,7 @@ export function WalletStatusItem({
         <div
           className={`w-3 h-3 rounded-full ${
             isConnected
-              ? 'bg-green-500 shadow-lg shadow-green-500/30'
+              ? 'bg-primary shadow-lg shadow-primary/30'
               : 'bg-red-500 shadow-lg shadow-red-500/30'
           }`}
         />

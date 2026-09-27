@@ -301,8 +301,8 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
                             {auction.nft.stats.defense}
                           </div>
                         </div>
-                        <div className="text-center p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                          <div className="text-xs text-green-600 font-medium mb-1">
+                        <div className="text-center p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                          <div className="text-xs text-primary font-medium mb-1">
                             HP
                           </div>
                           <div className="text-lg font-bold">
@@ -441,7 +441,7 @@ export function AuctionsList({ userAddress }: AuctionsListProps) {
                     <div className="text-center space-y-2">
                       <Badge
                         variant="secondary"
-                        className="bg-green-100 text-green-800 text-sm px-4 py-2"
+                        className="bg-primary/10 text-primary text-sm px-4 py-2"
                       >
                         <Crown className="h-4 w-4 mr-2" />
                         Sold

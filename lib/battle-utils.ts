@@ -1,7 +1,7 @@
 export const NFT_TYPE_COLORS = {
   0: 'bg-red-500 text-white',
   1: 'bg-blue-500 text-white',
-  2: 'bg-green-500 text-white',
+  2: 'bg-primary text-white',
 };
 
 export function getPlayerDisplayName(address: string, name?: string): string {

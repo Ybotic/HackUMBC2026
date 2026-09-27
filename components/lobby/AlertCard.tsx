@@ -33,13 +33,13 @@ export function AlertCard({
         buttonBorder: 'border-orange-200 dark:border-orange-800',
       }
     : {
-        bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20',
-        border: 'border-green-200 dark:border-green-800',
-        iconBg: 'bg-green-500/10',
-        iconColor: 'text-green-600 dark:text-green-400',
-        titleColor: 'text-green-700 dark:text-green-300',
-        descColor: 'text-green-600 dark:text-green-400',
-        buttonBorder: 'border-green-200 dark:border-green-800',
+        bg: 'bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/15 dark:to-primary/5',
+        border: 'border-primary/25',
+        iconBg: 'bg-primary/10',
+        iconColor: 'text-primary',
+        titleColor: 'text-primary',
+        descColor: 'text-primary',
+        buttonBorder: 'border-primary/25',
       };
 
   const Icon = isWarning ? AlertCircle : CheckCircle;

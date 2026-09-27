@@ -72,11 +72,11 @@ export function BattleReadinessCard({
           </div>
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${creatorReady ? 'bg-green-500' : 'bg-gray-300'}`}
+              className={`w-2 h-2 rounded-full ${creatorReady ? 'bg-primary' : 'bg-gray-300'}`}
             />
             <span className="text-sm">P1</span>
             <div
-              className={`w-2 h-2 rounded-full ${joinerReady ? 'bg-green-500' : 'bg-gray-300'}`}
+              className={`w-2 h-2 rounded-full ${joinerReady ? 'bg-primary' : 'bg-gray-300'}`}
             />
             <span className="text-sm">P2</span>
           </div>

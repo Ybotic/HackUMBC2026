@@ -73,10 +73,10 @@ export function NFTStatsDisplay({ stats }: NFTStatsDisplayProps) {
       <Separator />
       <div className="flex justify-between items-center font-semibold text-sm">
         <span className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-green-500" />
+          <div className="w-2 h-2 rounded-full bg-primary" />
           Max Health:
         </span>
-        <span className="text-green-600 font-bold">{stats.maxHealth} HP</span>
+        <span className="text-primary font-bold">{stats.maxHealth} HP</span>
       </div>
     </div>
   );

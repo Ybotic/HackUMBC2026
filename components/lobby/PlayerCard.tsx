@@ -60,7 +60,7 @@ export function PlayerCard({
             </div>
           </div>
           {nftData?.isReady && (
-            <Badge variant="default" className="bg-green-500 text-white">
+            <Badge variant="default" className="bg-primary text-white">
               Ready
             </Badge>
           )}

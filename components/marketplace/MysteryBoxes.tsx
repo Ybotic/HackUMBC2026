@@ -489,7 +489,7 @@ export function MysteryBoxes({ userAddress }: MysteryBoxesProps) {
 
                             {/* Minting Section */}
                             <div className="space-y-3">
-                              <div className="text-sm font-medium text-green-600 flex items-center justify-center gap-2">
+                              <div className="text-sm font-medium text-primary flex items-center justify-center gap-2">
                                 <Package className="h-4 w-4" />
                                 Mint as NFT
                               </div>
