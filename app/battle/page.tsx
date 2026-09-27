@@ -272,7 +272,7 @@ export default function BattlePage() {
                   You need at least three synced NFTs to ready up.{' '}
                   <TransitionLink
                     className="font-medium text-primary underline-offset-4 hover:underline"
-                    href="/generate"
+                    href={`/generate?wallet=${encodeURIComponent(selectedAccount.address)}`}
                   >
                     Create a card
                   </TransitionLink>{' '}

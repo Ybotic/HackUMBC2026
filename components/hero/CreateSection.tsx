@@ -7,8 +7,10 @@ import PixelateSvgFilter from '@/components/fancy/pixelate-svg-filter';
 import { motion } from 'motion/react';
 import UnderlineToBackground from '@/components/fancy/underline-to-background';
 import { Link } from 'next-view-transitions';
+import { useSolana } from '@/lib/providers/SolanaProvider';
 
 export default function CreateSection() {
+  const { selectedAccount } = useSolana();
   const containerRef = useRef<HTMLDivElement>(null);
   const mousePosition = useMousePosition(containerRef);
   const pixelSize = Math.min(Math.max(mousePosition.x / 100, 1), 30);
@@ -52,7 +54,13 @@ export default function CreateSection() {
               className="text-6xl sm:text-7xl md:text-9xl lg:text-[15rem] font-bold leading-none mt-0 md:-mt-4 lg:-mt-9 tracking-[-0.1rem] lg:tracking-[-0.8rem]"
               whileHover="target"
             >
-              <Link href="/generate">
+              <Link
+                href={
+                  selectedAccount
+                    ? `/generate?wallet=${encodeURIComponent(selectedAccount.address)}`
+                    : '/generate'
+                }
+              >
                 <UnderlineToBackground
                   label="NFTs"
                   targetTextColor="#ffffff"

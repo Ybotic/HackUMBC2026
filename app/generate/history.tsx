@@ -1,19 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { usePreloadedQuery, type Preloaded } from 'convex/react';
+import type { api } from '@/convex/_generated/api';
 import { useSolana } from '@/lib/providers/SolanaProvider';
 import { useSolanaNFT } from '@/lib/providers/SolanaNFTProvider';
 import Image from 'next/image';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -55,20 +48,17 @@ type ImageGen = {
   height?: number;
 };
 
-export function ImageHistory() {
-  const { selectedAccount } = useSolana();
-  const userAddress = selectedAccount?.address;
+export function ImageHistory({
+  preloadedHistory,
+}: {
+  preloadedHistory: Preloaded<typeof api.images.getUserImages>;
+}) {
   const [searchDate, setSearchDate] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
-  const images = useQuery(
-    api.images.getUserImages,
-    userAddress ? { userAddress } : 'skip',
-  );
+  const images = usePreloadedQuery(preloadedHistory);
 
   const filteredImages = useMemo(() => {
-    if (!images) return [];
-
     let filtered = images;
 
     if (searchDate) {
@@ -88,44 +78,7 @@ export function ImageHistory() {
     );
   }, [images, searchDate, sortOrder]);
 
-  if (!userAddress) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">
-          Connect your wallet to view your image history
-        </p>
-      </div>
-    );
-  }
-
-  if (!images) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card
-              key={i}
-              className="overflow-hidden flex flex-col bg-card border-2"
-            >
-              <CardHeader className="p-4 pb-2">
-                <Skeleton className="h-5 w-2/3 mb-1" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent className="p-4 pt-2 flex-grow">
-                <Skeleton className="w-full aspect-[5/7] rounded-lg" />
-              </CardContent>
-              <CardFooter className="p-4 pt-2 flex justify-center gap-3">
-                <Skeleton className="h-9 flex-1" />
-                <Skeleton className="h-9 flex-1" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (filteredImages.length === 0 && images?.length === 0) {
+  if (filteredImages.length === 0 && images.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <p className="text-muted-foreground">No images generated yet</p>
@@ -204,16 +157,16 @@ function ImageCard({ image }: { image: ImageGen }) {
   const { nftManager, isInitialized } = useSolanaNFT();
   const { selectedAccount } = useSolana();
   const [collections, setCollections] = useState<UserCollection[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isInitialized && selectedAccount?.address && nftManager) {
+    if (mintOpen && isInitialized && selectedAccount?.address && nftManager) {
       setLoading(true);
       getUserCollections(nftManager, selectedAccount.address)
         .then(setCollections)
         .finally(() => setLoading(false));
     }
-  }, [isInitialized, selectedAccount?.address, nftManager]);
+  }, [mintOpen, isInitialized, selectedAccount?.address, nftManager]);
 
   return (
     <>

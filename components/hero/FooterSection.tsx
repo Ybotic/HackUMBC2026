@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { Link as TransitionLink } from 'next-view-transitions';
 import { useRef } from 'react';
 import ParticleRose from '@/components/hero/particle-rose';
+import { useSolana } from '@/lib/providers/SolanaProvider';
 
 export default function FooterSection() {
+  const { selectedAccount } = useSolana();
   const artFadeRef = useRef(0);
 
   return (
@@ -45,7 +47,11 @@ export default function FooterSection() {
               Dashboard
             </TransitionLink>
             <TransitionLink
-              href="/generate"
+              href={
+                selectedAccount
+                  ? `/generate?wallet=${encodeURIComponent(selectedAccount.address)}`
+                  : '/generate'
+              }
               className="text-3xl sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-garamond tracking-tighter uppercase hover:text-[#0086F0] transition-all duration-300 hover:scale-110 text-center"
             >
               Generate
