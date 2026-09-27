@@ -347,6 +347,7 @@ export const getNFTMetadata = query({
     return {
       itemMetadata: nftItem.itemMetadata,
       itemDetails: nftItem.itemDetails,
+      stats: nftItem.stats,
     };
   },
 });

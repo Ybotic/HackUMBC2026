@@ -1,6 +1,52 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { requireUser } from './users';
+import { battleNFTReferenceSchema } from './schema';
+
+type NFTReference = { collection: string; item: string };
+
+async function validatedRoster(
+  ctx: MutationCtx,
+  cards: NFTReference[],
+  address: string,
+  min = 3,
+) {
+  if (cards.length < min || cards.length > 5) {
+    throw new Error('Choose between 3 and 5 NFTs');
+  }
+  const keys = cards.map(({ collection, item }) =>
+    JSON.stringify([collection, item]),
+  );
+  if (new Set(keys).size !== cards.length)
+    throw new Error('Choose distinct NFTs');
+  const user = await requireUser(ctx, address);
+  return Promise.all(
+    cards.map(async ({ collection, item }) => {
+      const nft = await ctx.db
+        .query('nftItems')
+        .withIndex('by_item', (q) =>
+          q.eq('collectionId', collection).eq('itemId', item),
+        )
+        .first();
+      if (
+        !nft ||
+        nft.owner !== address ||
+        nft.userAddress !== user._id ||
+        !nft.stats
+      ) {
+        throw new Error(
+          'An NFT is not owned by this wallet or has no synced stats',
+        );
+      }
+      return {
+        collection,
+        item,
+        stats: nft.stats,
+        moves: nft.customMoves ?? [],
+      };
+    }),
+  );
+}
 
 export const createLobby = mutation({
   args: {
@@ -125,6 +171,55 @@ export const updateLobbyNFT = mutation({
   },
 });
 
+export const updateLobbyRoster = mutation({
+  args: {
+    lobbyId: v.string(),
+    playerAddress: v.string(),
+    cards: v.array(battleNFTReferenceSchema),
+    isReady: v.boolean(),
+  },
+  handler: async (ctx, { lobbyId, playerAddress, cards, isReady }) => {
+    const lobby = await ctx.db
+      .query('lobbies')
+      .filter((q) => q.eq(q.field('lobbyId'), lobbyId))
+      .first();
+    if (!lobby || (lobby.status !== 'waiting' && lobby.status !== 'ready')) {
+      throw new Error('Lobby is not accepting roster changes');
+    }
+    if (
+      playerAddress !== lobby.creatorAddress &&
+      playerAddress !== lobby.joinedPlayerAddress
+    ) {
+      throw new Error('Player not in this lobby');
+    }
+    if (cards.length > 5) throw new Error('Choose no more than 5 NFTs');
+    if (cards.length > 0) await validatedRoster(ctx, cards, playerAddress, 1);
+    if (isReady && cards.length < 3) throw new Error('Choose at least 3 NFTs');
+
+    const previous =
+      playerAddress === lobby.creatorAddress
+        ? lobby.creatorRoster
+        : lobby.joinerRoster;
+    const changed =
+      JSON.stringify(previous?.cards ?? []) !== JSON.stringify(cards);
+    const roster = { cards, isReady: isReady && !changed };
+    // Selecting a different roster always clears readiness; the next request confirms it.
+    const creatorRoster =
+      playerAddress === lobby.creatorAddress ? roster : lobby.creatorRoster;
+    const joinerRoster =
+      playerAddress === lobby.joinedPlayerAddress ? roster : lobby.joinerRoster;
+    await ctx.db.patch(lobby._id, {
+      ...(playerAddress === lobby.creatorAddress
+        ? { creatorRoster: roster }
+        : { joinerRoster: roster }),
+      status:
+        creatorRoster?.isReady && joinerRoster?.isReady ? 'ready' : 'waiting',
+      lastActivity: Date.now(),
+    });
+    return { isReady: roster.isReady };
+  },
+});
+
 export const startBattleFromLobby = mutation({
   args: {
     lobbyId: v.string(),
@@ -150,49 +245,29 @@ export const startBattleFromLobby = mutation({
       );
     }
 
-    if (!lobby.creatorNFT?.isReady || !lobby.joinerNFT?.isReady) {
-      throw new Error('Both players must be ready');
+    if (args.initiatorAddress !== lobby.creatorAddress) {
+      throw new Error('Only the lobby creator may start the battle');
+    }
+
+    if (!lobby.creatorRoster?.isReady || !lobby.joinerRoster?.isReady) {
+      throw new Error('Both players must lock their rosters');
     }
 
     const battleId = Math.random().toString(36).substring(2, 10).toUpperCase();
     const now = Date.now();
 
-    if (!lobby.creatorNFT || !lobby.joinerNFT) {
-      throw new Error('NFT selections are missing');
-    }
-
-    const creatorNFT = lobby.creatorNFT;
-    const joinerNFT = lobby.joinerNFT;
-
-    const player1NFTData = await ctx.db
-      .query('nftItems')
-      .withIndex('by_item', (q) =>
-        q
-          .eq('collectionId', creatorNFT.collection)
-          .eq('itemId', creatorNFT.item),
-      )
-      .first();
-
-    const player2NFTData = await ctx.db
-      .query('nftItems')
-      .withIndex('by_item', (q) =>
-        q.eq('collectionId', joinerNFT.collection).eq('itemId', joinerNFT.item),
-      )
-      .first();
-
-    if (!player1NFTData?.stats || !player2NFTData?.stats) {
-      throw new Error('NFT stats not found. Please ensure NFTs are synced.');
-    }
-
-    const player1Stats = player1NFTData.stats;
-    const player2Stats = player2NFTData.stats;
-
-    // TODO: correct
-    // determine who goes first (higher speed)
-    const firstPlayer =
-      player1Stats.speed >= player2Stats.speed
-        ? lobby.creatorAddress
-        : lobby.joinedPlayerAddress;
+    const player1Roster = await validatedRoster(
+      ctx,
+      lobby.creatorRoster.cards,
+      lobby.creatorAddress,
+    );
+    const player2Roster = await validatedRoster(
+      ctx,
+      lobby.joinerRoster.cards,
+      lobby.joinedPlayerAddress,
+    );
+    const player1Stats = player1Roster[0].stats;
+    const player2Stats = player2Roster[0].stats;
 
     const battleDbId = await ctx.db.insert('battles', {
       battleId,
@@ -201,25 +276,23 @@ export const startBattleFromLobby = mutation({
       player1Name: lobby.creatorName,
       player2Name: lobby.joinedPlayerName,
 
-      player1NFT: {
-        collection: lobby.creatorNFT.collection,
-        item: lobby.creatorNFT.item,
-        stats: player1Stats,
-      },
-      player2NFT: {
-        collection: lobby.joinerNFT.collection,
-        item: lobby.joinerNFT.item,
-        stats: player2Stats,
-      },
+      player1NFT: player1Roster[0],
+      player2NFT: player2Roster[0],
+      player1Roster,
+      player2Roster,
 
       gameState: {
-        currentTurn: firstPlayer,
+        // Placeholder until both players select a starting card; confirmLineup
+        // chooses the real first turn from those active cards' speeds.
+        currentTurn: lobby.creatorAddress,
         player1Health: player1Stats.maxHealth,
         player2Health: player2Stats.maxHealth,
         player1MaxHealth: player1Stats.maxHealth,
         player2MaxHealth: player2Stats.maxHealth,
         turnNumber: 0,
-        status: 'active',
+        player1CardHealth: player1Roster.map((card) => card.stats.maxHealth),
+        player2CardHealth: player2Roster.map((card) => card.stats.maxHealth),
+        status: 'initializing',
       },
 
       moves: [],
@@ -237,18 +310,32 @@ export const startBattleFromLobby = mutation({
       battleDbId,
       player1Stats,
       player2Stats,
-      firstPlayer,
     };
   },
 });
 
 export const getLobby = query({
-  args: { lobbyId: v.string() },
+  args: { lobbyId: v.string(), viewerAddress: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const lobby = await ctx.db
       .query('lobbies')
       .filter((q) => q.eq(q.field('lobbyId'), args.lobbyId))
       .first();
+    if (!lobby) return null;
+    if (lobby.creatorRoster?.isReady && lobby.joinerRoster?.isReady)
+      return lobby;
+    // Do not send the opponent's choices to the ordinary lobby view until both lock.
+    return {
+      ...lobby,
+      creatorRoster:
+        args.viewerAddress === lobby.creatorAddress
+          ? lobby.creatorRoster
+          : lobby.creatorRoster && { ...lobby.creatorRoster, cards: [] },
+      joinerRoster:
+        args.viewerAddress === lobby.joinedPlayerAddress
+          ? lobby.joinerRoster
+          : lobby.joinerRoster && { ...lobby.joinerRoster, cards: [] },
+    };
   },
 });
 

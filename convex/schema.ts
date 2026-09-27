@@ -19,6 +19,18 @@ export const nftMoveSchema = v.object({
   iconName: v.string(), // lucide react icon name
 });
 
+export const battleNFTReferenceSchema = v.object({
+  collection: v.string(),
+  item: v.string(),
+});
+
+export const battleNFTSchema = v.object({
+  collection: v.string(),
+  item: v.string(),
+  stats: nftStatsSchema,
+  moves: v.optional(v.array(nftMoveSchema)),
+});
+
 export const tierSchema = v.union(
   v.literal('common'),
   v.literal('uncommon'),
@@ -89,6 +101,19 @@ export default defineSchema({
       }),
     ),
 
+    creatorRoster: v.optional(
+      v.object({
+        cards: v.array(battleNFTReferenceSchema),
+        isReady: v.boolean(),
+      }),
+    ),
+    joinerRoster: v.optional(
+      v.object({
+        cards: v.array(battleNFTReferenceSchema),
+        isReady: v.boolean(),
+      }),
+    ),
+
     // Real-time presence
     playersOnline: v.array(v.string()),
     lastActivity: v.number(),
@@ -110,16 +135,11 @@ export default defineSchema({
     player2Name: v.optional(v.string()),
 
     // NFTs locked in at battle start
-    player1NFT: v.object({
-      collection: v.string(),
-      item: v.string(),
-      stats: nftStatsSchema,
-    }),
-    player2NFT: v.object({
-      collection: v.string(),
-      item: v.string(),
-      stats: nftStatsSchema,
-    }),
+    player1NFT: battleNFTSchema,
+    player2NFT: battleNFTSchema,
+    // Optional for pre-roster battles. Indices in gameState refer to these snapshots.
+    player1Roster: v.optional(v.array(battleNFTSchema)),
+    player2Roster: v.optional(v.array(battleNFTSchema)),
 
     // Authoritative server-side game state
     gameState: v.object({
@@ -128,6 +148,12 @@ export default defineSchema({
       player2Health: v.number(),
       player1MaxHealth: v.number(),
       player2MaxHealth: v.number(),
+      player1Lineup: v.optional(v.array(v.number())),
+      player2Lineup: v.optional(v.array(v.number())),
+      player1Active: v.optional(v.number()),
+      player2Active: v.optional(v.number()),
+      player1CardHealth: v.optional(v.array(v.number())),
+      player2CardHealth: v.optional(v.array(v.number())),
       turnNumber: v.number(),
 
       status: v.union(
@@ -160,6 +186,9 @@ export default defineSchema({
         targetHealth: v.optional(v.number()),
         turnId: v.string(),
         timestamp: v.number(),
+        kind: v.optional(v.union(v.literal('attack'), v.literal('switch'))),
+        cardIndex: v.optional(v.number()),
+        targetIndex: v.optional(v.number()),
       }),
     ),
 
