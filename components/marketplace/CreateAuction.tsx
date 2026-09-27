@@ -46,6 +46,11 @@ import {
 } from '@/lib/constants/marketplace';
 import { getNFTMetadata, getIpfsImageUrl } from '@/lib/utils';
 
+const shortenId = (id: string, head = 4, tail = 4) =>
+  id && id.length > head + tail + 1
+    ? `${id.slice(0, head)}…${id.slice(-tail)}`
+    : id;
+
 interface CreateAuctionProps {
   userAddress: string;
   preloadedNfts: Preloaded<typeof api.nft.getUserNFTs>;
@@ -129,7 +134,7 @@ export function CreateAuction({
               /* Two Column Layout with Selected NFT */
               <div className="grid grid-cols-1 xl:grid-cols-3 h-full">
                 {/* Left: NFT Showcase */}
-                <div className="xl:col-span-1 bg-muted/30 p-8 border-r">
+                <div className="xl:col-span-1 min-w-0 bg-muted/30 p-8 border-r">
                   <div className="space-y-6">
                     <Button
                       variant="ghost"
@@ -175,7 +180,7 @@ export function CreateAuction({
                           />
                         </div>
                       </div>
-                      <h3 className="text-xl font-bold mt-4">
+                      <h3 className="text-xl font-bold mt-4 truncate">
                         {(() => {
                           const metadata = getNFTMetadata(
                             selectedNft.itemMetadata,
@@ -183,8 +188,14 @@ export function CreateAuction({
                           return metadata?.name || `NFT #${selectedNft.item}`;
                         })()}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Collection {selectedNft.collection}
+                      <p
+                        className="mx-auto mt-1 flex w-fit max-w-full items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
+                        title={selectedNft.collection}
+                      >
+                        <span>Collection</span>
+                        <span className="truncate font-mono text-foreground/80">
+                          {shortenId(selectedNft.collection, 6, 6)}
+                        </span>
                       </p>
                       {selectedNft.stats && (
                         <Badge variant="secondary" className="mt-2">
@@ -434,7 +445,7 @@ export function CreateAuction({
                           >
                             <div className="flex flex-col h-full space-y-4">
                               <div className="flex items-start justify-between">
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2">
                                     <div className="w-12 h-12 rounded-lg overflow-hidden border border-border bg-card flex-shrink-0">
                                       {imageUrl ? (
@@ -460,7 +471,7 @@ export function CreateAuction({
                                         {metadata?.name || `NFT #${nft.item}`}
                                       </h4>
                                       <p className="text-sm text-muted-foreground truncate">
-                                        Collection {nft.collection}
+                                        Collection {shortenId(nft.collection)}
                                       </p>
                                     </div>
                                   </div>
