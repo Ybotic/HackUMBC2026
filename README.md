@@ -1,3 +1,6 @@
+> [!NOTE]
+> 🏆 Winner — [MLH Best Use of Solana](https://devpost.com/software/mint-kpta3d)
+
 # Mint — Solana TCG
 
 Mint is an AI-assisted trading card game. Players generate card art, mint cards
